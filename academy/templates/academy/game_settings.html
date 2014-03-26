@@ -1,0 +1,9 @@
+<form method="post" action="{% url 'game_settings' pk=game.pk %}">{% csrf_token %}
+    <ul>
+        <li>Player 1: {{ form.player1 }}</li>
+        <li>Player 2: {{ form.player2 }}</li>
+        <li>Player 3: {{ form.player3 }}</li>
+        <li>Player 4: {{ form.player4 }}</li>
+    </ul>
+    <input type="submit" value="Start game" />
+</form>

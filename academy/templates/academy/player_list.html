@@ -1,0 +1,9 @@
+<form method="post" action="{% url 'player_create' %}">{% csrf_token %}
+    Name: <input name="nick" />
+    <input type="submit" value="New player" />
+</form>
+<ul>
+    {% for player in player_list %}
+    <li><a href="{% url 'player' pk=player.pk %}">{{ player }}</a></li>
+    {% endfor %}
+</ul>

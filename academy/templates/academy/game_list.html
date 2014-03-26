@@ -1,0 +1,8 @@
+<form method="post" action="{% url 'game_create' %}">{% csrf_token %}
+    <input type="submit" value="New game" />
+</form>
+<ul>
+{% for game in games %}
+<li>{{ game }}</li>
+{% endfor %}
+</ul>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Academy BDD</title>
+<script>
+PLAYERS = 4;
+SUITS = 4;
+ACE = 14;
+SIPS = 14;
+
+function Game(elem_by_id) {
+    this.el_deck = elem_by_id('deck');
+    this.el_history = elem_by_id('history');
+    this.el_chuck = elem_by_id('chuck');
+    this.el_chuck_history = elem_by_id('chuck_history');
+    this.deck = make_shuffled_deck();
+    this.chucks = [];
+    this.history = [];
+    this.chuck_history = [];
+    this.state = [];
+    for (var i = 1; i <= PLAYERS; ++i) {
+        var beers = elem_by_id('p'+i+'_beers');
+        var sips = elem_by_id('p'+i+'_sips');
+        this.state.push({beers: beers, sips: sips});
+    }
+
+    this.render();
+
+    this.is_chucking = false;
+}
+
+Game.prototype.ui_draw = function Game_ui_draw() {
+    if (this.is_chucking) return;
+    if (this.deck.length == 0) return;
+    var card = this.deck.pop();
+    this.history.push(card);
+    this.render();
+    if (card_to_number(card) == ACE) {
+        this.is_chucking = true;
+        this.el_chuck.textContent = 'Start the time!';
+    }
+};
+
+Game.prototype.ui_chuck = function Game_ui_chuck() {
+    if (!this.is_chucking) return;
+    if (!this.chuck_start) {
+        this.chuck_start = new Date();
+        this.start_chuck_timer();
+    } else {
+        this.stop_chuck_timer();
+        var milliseconds = new Date().getTime() - this.chuck_start;
+        this.set_chuck(milliseconds);
+
+        this.is_chucking = false;
+        this.chuck_start = null;
+
+        this.chuck_history.push({
+            player: (this.history.length - 1) % PLAYERS,
+            card: this.history[this.history.length-1],
+            milliseconds: milliseconds
+        });
+        this.render();
+    }
+};
+
+Game.prototype.ui_save = function Game_ui_save(form) {
+    var data = {'cards': this.history, 'chucks': []};
+    for (var i = 0; i < this.chuck_history.length; ++i) {
+        var c = this.chuck_history[i];
+        data['chucks'].push({
+            'participant': c.player,
+            'suit': card_to_suit(c.card),
+            'milliseconds': c.milliseconds
+        });
+    }
+    form.data.value = JSON.stringify(data);
+};
+
+Game.prototype.start_chuck_timer = function Game_start_chuck_timer() {
+    var self = this;
+    this.chuck_interval = setInterval(function () {
+        var milliseconds = new Date().getTime() - self.chuck_start;
+        self.set_chuck(milliseconds);
+    }, 10);
+};
+
+Game.prototype.stop_chuck_timer = function Game_stop_chuck_timer() {
+    clearInterval(this.chuck_interval);
+};
+
+function milliseconds_to_string(milliseconds) {
+    var minutes = (seconds / 60000) | 0;
+    var seconds = (milliseconds / 1000 - minutes * 60) | 0;
+    milliseconds = milliseconds % 1000;
+    function z(n, l) {
+        var s = ''+n;
+        while (s.length < l) s = '0' + s;
+        return s;
+    }
+    return z(minutes, 2)+':'+z(seconds, 2)+'.'+z(milliseconds, 3);
+}
+
+Game.prototype.set_chuck = function (milliseconds) {
+    this.el_chuck.textContent = milliseconds_to_string(milliseconds);
+};
+
+Game.prototype.render = function Game_render() {
+    this.render_deck();
+    this.render_state();
+    this.render_history();
+    this.render_chuck_history();
+};
+
+Game.prototype.render_deck = function Game_render_deck() {
+    var s = [];
+    for (var suit = 0; suit < SUITS; ++suit) {
+        var row = [];
+        for (var n = 2; n <= ACE; ++n) {
+            var c = make_card(suit, n);
+            if (this.deck.indexOf(c) == -1) row.push('--');
+            else row.push(c);
+        }
+        s.push(row.join(' '));
+    }
+    this.el_deck.innerHTML = s.join('<br>');
+};
+
+Game.prototype.render_state = function Game_render_state() {
+    for (var i = 0; i < PLAYERS; ++i) {
+        var sips = 0;
+        for (var j = i; j < this.history.length; j += PLAYERS) {
+            sips += card_to_number(this.history[j]);
+        }
+
+        var beers = ((sips + SIPS) / SIPS) | 0;
+
+        var remaining_sips = beers * SIPS - sips;
+
+        this.state[i].beers.textContent = beers;
+        this.state[i].sips.textContent = remaining_sips;
+    }
+};
+
+Game.prototype.render_history = function Game_render_history() {
+    var a = [];
+    for (var i = 0; i < this.history.length; ++i) {
+        if (i == 0) {}
+        else if (i % PLAYERS == 0) { a.push('<br>'); }
+        else { a.push(', '); }
+        a.push(this.history[i]);
+    }
+    this.el_history.innerHTML = a.join('');
+};
+
+Game.prototype.render_chuck_history = function Game_render_chuck_history() {
+    var a = [];
+    for (var i = 0; i < this.chuck_history.length; ++i) {
+        var o = this.chuck_history[i];
+        a.push(o.player+' drew '+o.card+': '+milliseconds_to_string(o.milliseconds));
+        a.push('<br>');
+    }
+    this.el_chuck_history.innerHTML = a.join('');
+};
+
+function suit_to_char(i) {
+    return 'SHCD'.charAt(i);
+}
+
+function number_to_char(i) {
+    return '23456789TJQKA'.charAt(i-2);
+}
+
+function make_card(suit, n) {
+    return suit_to_char(suit) + number_to_char(n);
+}
+
+function card_to_suit(card) {
+    var suits = {'S': 0, 'H': 1, 'C': 2, 'D': 3};
+    return suits[card.charAt(0)];
+}
+
+function card_to_number(card) {
+    var ns = {'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14};
+    return (ns[card.charAt(1)] || card.charAt(1)) | 0;
+}
+
+function make_deck() {
+    deck = [];
+    for (var suit = 0; suit < SUITS; ++suit) {
+        for (var n = 2; n <= ACE; ++n) {
+            var c = make_card(suit, n);
+            deck.push(c);
+
+            // Assertions for correctness
+            if (suit != card_to_suit(c)) console.log("Bad suit: "+c);
+            if (n != card_to_number(c)) console.log("Bad number: "+c);
+        }
+    }
+    return deck;
+}
+
+function shuffled(a) {
+    var r = [];
+    while (a.length > 0) {
+        r.push(a.splice((Math.random() * a.length) | 0, 1)[0]);
+    }
+    return r;
+}
+
+function make_shuffled_deck() {
+    return shuffled(make_deck());
+}
+
+window.onload = function () {
+    window.academy_game = new Game(function (i) { return document.getElementById(i); });
+    window.ui_draw = function () { window.academy_game.ui_draw(); };
+    window.ui_chuck = function () { window.academy_game.ui_chuck(); };
+    window.ui_save = function (form) { window.academy_game.ui_save(form); };
+};
+</script>
+<style>
+.state dt {
+    float: left;
+    width: 160px;
+    clear: left;
+    white-space: nowrap;
+}
+.state dd {
+    margin-left: 160px;
+}
+
+.remainder {
+    font-family: monospace;
+}
+
+</style>
+</head>
+<body>
+<div class="deck">
+    <div><input type="button" value="Draw next card" onclick="ui_draw()" /></div>
+    <div class="remainder"><span id="deck"></span></div>
+</div>
+
+<h2>State</h2>
+<div class="state">
+    <dl>
+    <dt>{{ player1 }} sips:</dt>
+    <dd>
+        <span id="p1_beers">1</span>*14
+        &minus; <span id="p1_sips">14</span>
+    </dd>
+    <dt>{{ player2 }} sips:</dt>
+    <dd>
+        <span id="p2_beers">1</span>*14
+        &minus; <span id="p2_sips">14</span>
+    </dd>
+    <dt>{{ player3 }} sips:</dt>
+    <dd>
+        <span id="p3_beers">1</span>*14
+        &minus; <span id="p3_sips">14</span>
+    </dd>
+    <dt>{{ player4 }} sips:</dt>
+    <dd>
+        <span id="p4_beers">1</span>*14
+        &minus; <span id="p4_sips">14</span>
+    </dd>
+    </dl>
+</div>
+
+<h2>History</h2>
+<div class="history">
+    <div>
+        {{ player1 }}
+        {{ player2 }}
+        {{ player3 }}
+        {{ player4 }}
+    </div>
+    <span id="history"></span>
+</div>
+
+<h2>Chucks</h2>
+<div class="chuck">
+    <span id="chuck"></span>
+    <input type="button" value="Start/stop" onclick="ui_chuck()" />
+</div>
+<div class="chuck_history">
+    <div id="chuck_history">
+    </div>
+</div>
+
+<form method="post" action="{% url 'game_save' pk=game.pk %}">{% csrf_token %}
+    <input type="hidden" name="data" value="" />
+    <input type="submit" onclick="ui_save(this.form)" value="Upload game" />
+</form>
+
+
+
+<!--
+<img id="img_beerbottle" src="data:image/png;base64,
+iVBORw0KGgoAAAANSUhEUgAAADIAAABkCAIAAABLivQMAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ
+bWFnZVJlYWR5ccllPAAAA2ZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdp
+bj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6
+eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYxIDY0LjE0
+MDk0OSwgMjAxMC8xMi8wNy0xMDo1NzowMSAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJo
+dHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlw
+dGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEu
+MC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVz
+b3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1N
+Ok9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDo2RTk4MUM2NDgxQ0RFMDExQUYyQ0U2MTNGMTgx
+RUY0RSIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo0QTRDOUUzMUNCOUMxMUUxOTE5Mzg0RDcx
+RDg3NzQzNCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo0QTRDOUUzMENCOUMxMUUxOTE5Mzg0
+RDcxRDg3NzQzNCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1LjEgV2luZG93
+cyI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjg4RDk4QTNF
+OUNDQkUxMTFBODYzQjUzRDJEM0NBQTNCIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjZFOTgx
+QzY0ODFDREUwMTFBRjJDRTYxM0YxODFFRjRFIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpS
+REY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8++g6z5AAABJpJREFUaN7t2+1vFEUc
+B/DvzM7eczmqILGBqLyAGIgvbExfaIJ9hTHxL4BEX5iYGP0D1Bc+vYBo4luNIVBfoKUqgYA0qGCi
+tSEQTQRirdJKaZvetdfr3T7O7uyDL9qaquRu7rrdK3En83Ju7rMzv9mZ2dklYRhi8yWKTZkSViuJ
+RVURFw4ApjBGlc6zRm5eOT1y7sofv+jchKIwhfVs6+nf1/dMb//+XXvarpa0PRK5w59/7+WhS0MI
+fDAVjEFRQCkAEJLJd51548TBx56KO7a+vz46dH4AjCHXhUwOqcxKzuSQLXDbuHRjtAMhf+33n0EV
+LEdSuCavVKzcKt/pQGzZjg0QAFAImAJKQRVQCkKWCyyZWgdYPdt6kFORS+NfwUkJGANhe3fu7gBr
+3yOPQviwHFAFhIKGUAAaIgjhA8LbvX1nB2LLEwIiWB3Qa/Jqqhl6B1hzi+W1iP+mslbpAMviVuMC
+Vb3WAVapVm5coGJ0gqWZDUOHUoObnu/FzVqsLzauWeeW3qyjo2fVjHrDyZYY3DLiZy01Dh1KNW7o
+3IiVJTyhW8bKeuHurUW5HXtr+YHvCvfv6e+unRg6tmabsbI0U9dMvRELACHleiVWliscVwiQJj9v
+exHRbmtZRt3SG8UWAGBer8bK4q7jubxJJwLzTe5tUbN0Sxem1rQTK/pSvCzbaNpUABZiZlVkeodS
+nVte4MXHqul1ic0eNbhpOjxGlsyiZXlabOuO2iarXJ2X2x0DJMbYsmQmuzAoZgvFbFd8rFK1LNOJ
+tuvYIsbYcjxHJuRrlq7HFluO61S1WtOZBwqr1xYmF2ZjYv12Z3x8agxqWmIB5F+8MRIT69TlL11N
+a95aABg789N3hmNtOGtusTRw/hOkVKnSavrW9Pjn177ZcNa7A0fmZqekenA18t+/cMJy+Qayzv5w
+7uOhD5FJAdLPEFOZscmbRy8c3yjW7MLsK0df9X2BVh/aprNHzn70VSux3wLr7WPvzNyeQird8hgh
+1PP9F4+/NS1zE26JNTEzcWp4ENm2ZjgAaqo0P/3Bt59GzBr8elCraGDreGCeypy8OlzSFiNjBWEw
+/OMw1nkMwNSFytzo5PXIWKVKaWJmIpITj6t//hoZq6pVl4wlRHBogrHS7chYmqm5hiuzp2ia6rYR
+GSudSrN0NIdWRO7a5FhqmqoUMZ7TSrHCMES8R8fJ6WvCSlgJK2H971lhGMb84pIUK5/N5zN5BJuM
+lcvkctlcnLP1vdyJyUhMWAkrYSWshJWwElbCSlgJK2ElrGSfuDYxxhRFieT/JC9PitXd1d3d1Q0/
+ApYqd/QnxUqpqb79ffDWjfK9/j29UYb84WcPIwX462gxx97xwK5DTxyMknXg8QOvvfQ6eADLgW2D
+W3A4XA5PwHPhCQT+P7In4AkIFy6HY8HSt9+349gLbz50/4Myf9fa50cnL372xeXTNbPuBJ7h2CII
+6rZOFOaFoWYbIaVQKAilTC0WthDGCtn81vyWYmHr03t7Dz353MNyJqznqyhHuMITdUujhHq+V7f0
+1YoIpbSY7yKEFtLZYq6d97dI8tnkvc/6C8SkDz3rQ67OAAAAAElFTkSuQmCC
+" />
+-->
+</body>
+</html>

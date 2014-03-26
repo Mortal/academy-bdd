@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Academy BDD</title>
+</head>
+<body>
+<h1>Game stats</h1>
+<p>Started: {{ game.start_time }}</p>
+<p>Ended: {{ game.end_time }}</p>
+<p>Played between:</p>
+<ul>
+    {% for participant in participants %}
+    <li>
+        {{ participant.player }}:
+        {{ participant.sips }} sips
+        (average {{ participant.average }})
+    </li>
+    {% endfor %}
+</ul>
+<p>Chucks:</p>
+<ul>
+    {% for chuck in chucks %}
+    <li>{{ chuck.participant.player }}: {{ chuck.time }} ms</li>
+    {% endfor %}
+</ul>
+<p>Cards:</p>
+<p>
+{% for card in cards %}
+{{ card }},
+{% endfor %}
+</p>
+</body>
+</html>
