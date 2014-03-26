@@ -111,6 +111,8 @@ class GamePlayView(V.TemplateView):
         data = super(GamePlayView, self).get_context_data(**kwargs)
         game = self.get_game()
         data['game'] = game
+        for i, p in enumerate(models.Participant.objects.filter(game=game)):
+            data['player%d' % (i+1)] = p.player
         return data
 
 class GameView(V.TemplateView):

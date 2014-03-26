@@ -13,15 +13,14 @@ function Game(elem_by_id) {
     this.el_history = elem_by_id('history');
     this.el_chuck = elem_by_id('chuck');
     this.el_chuck_history = elem_by_id('chuck_history');
+    this.el_upload_button = elem_by_id('upload_button');
     this.deck = make_shuffled_deck();
     this.chucks = [];
     this.history = [];
     this.chuck_history = [];
-    this.state = [];
+    this.el_state = [];
     for (var i = 1; i <= PLAYERS; ++i) {
-        var beers = elem_by_id('p'+i+'_beers');
-        var sips = elem_by_id('p'+i+'_sips');
-        this.state.push({beers: beers, sips: sips});
+        this.el_state.push(elem_by_id('player'+i));
     }
 
     this.render();
@@ -76,6 +75,13 @@ Game.prototype.ui_save = function Game_ui_save(form) {
     form.data.value = JSON.stringify(data);
 };
 
+Game.prototype.ui_shuffle = function Game_ui_shuffle() {
+    console.log("Shuffling deck...");
+    for (var i = 0; i < 52; ++i) {
+        // TODO implement shuffle
+    }
+};
+
 Game.prototype.start_chuck_timer = function Game_start_chuck_timer() {
     var self = this;
     this.chuck_interval = setInterval(function () {
@@ -109,6 +115,8 @@ Game.prototype.render = function Game_render() {
     this.render_state();
     this.render_history();
     this.render_chuck_history();
+    this.el_upload_button.style.display = (
+        (this.deck.length == 0) ? '' : 'none');
 };
 
 Game.prototype.render_deck = function Game_render_deck() {
@@ -125,19 +133,34 @@ Game.prototype.render_deck = function Game_render_deck() {
     this.el_deck.innerHTML = s.join('<br>');
 };
 
+function round_100(n) {
+    var s = n+'';
+    return s.replace(/([.,]..).*/, '$1');
+}
+
 Game.prototype.render_state = function Game_render_state() {
     for (var i = 0; i < PLAYERS; ++i) {
         var sips = 0;
+        var n = 0;
         for (var j = i; j < this.history.length; j += PLAYERS) {
             sips += card_to_number(this.history[j]);
+            ++n;
         }
 
-        var beers = ((sips + SIPS) / SIPS) | 0;
+        var card = (this.history.length <= i) ? '' : (
+            this.history[PLAYERS * (((this.history.length - i - 1) / PLAYERS) | 0) + i]);
 
-        var remaining_sips = beers * SIPS - sips;
+        var beers = (sips / SIPS) | 0;
 
-        this.state[i].beers.textContent = beers;
-        this.state[i].sips.textContent = remaining_sips;
+        var remaining_sips = (1 + beers) * SIPS - sips;
+
+        var a = [];
+        a.push('Latest card: '+card);
+        a.push('Sips remaining: '+remaining_sips);
+        a.push('Sips so far: '+sips);
+        a.push('Beers so far: '+beers);
+        a.push('Average sips: '+(n ? round_100(sips / n) : ''));
+        this.el_state[i].innerHTML = a.join('<br>');
     }
 };
 
@@ -216,9 +239,19 @@ window.onload = function () {
     window.ui_draw = function () { window.academy_game.ui_draw(); };
     window.ui_chuck = function () { window.academy_game.ui_chuck(); };
     window.ui_save = function (form) { window.academy_game.ui_save(form); };
+    window.ui_shuffle = function () { window.academy_game.ui_shuffle(); };
+    window.addEventListener('keypress', function (ev) {
+        if (ev.charCode == ' '.charCodeAt(0)) {
+            ui_draw();
+        }
+    }, false);
 };
 </script>
 <style>
+body {
+    font-family: sans-serif;
+}
+
 .state dt {
     float: left;
     width: 160px;
@@ -233,38 +266,62 @@ window.onload = function () {
     font-family: monospace;
 }
 
+.state {
+    margin: 16px 0;
+}
+
+.playerstate {
+    width: 200px;
+    display: inline-block;
+    padding: 8px;
+    border: 1px solid black;
+}
+
+.playerstate h3 {
+    margin: 0;
+}
+
+h2 {
+    clear: both;
+}
+
 </style>
 </head>
 <body>
+
+<form id="upload_button" method="post" action="{% url 'game_save' pk=game.pk %}">{% csrf_token %}
+    <input type="hidden" name="data" value="" />
+    <div>
+        Game finished!
+        <input type="submit" onclick="ui_save(this.form)" value="Upload game" />
+    </div>
+</form>
+
 <div class="deck">
-    <div><input type="button" value="Draw next card" onclick="ui_draw()" /></div>
+    <div>
+        <input type="button" value="Draw next card" onclick="ui_draw()" />
+        <input type="button" value="Shuffle" onclick="ui_shuffle()" />
+    </div>
     <div class="remainder"><span id="deck"></span></div>
 </div>
 
-<h2>State</h2>
 <div class="state">
-    <dl>
-    <dt>{{ player1 }} sips:</dt>
-    <dd>
-        <span id="p1_beers">1</span>*14
-        &minus; <span id="p1_sips">14</span>
-    </dd>
-    <dt>{{ player2 }} sips:</dt>
-    <dd>
-        <span id="p2_beers">1</span>*14
-        &minus; <span id="p2_sips">14</span>
-    </dd>
-    <dt>{{ player3 }} sips:</dt>
-    <dd>
-        <span id="p3_beers">1</span>*14
-        &minus; <span id="p3_sips">14</span>
-    </dd>
-    <dt>{{ player4 }} sips:</dt>
-    <dd>
-        <span id="p4_beers">1</span>*14
-        &minus; <span id="p4_sips">14</span>
-    </dd>
-    </dl>
+    <div class="playerstate">
+        <h3>{{ player1 }}</h3>
+        <div id="player1"></div>
+    </div>
+    <div class="playerstate">
+        <h3>{{ player2 }}</h3>
+        <div id="player2"></div>
+    </div>
+    <div class="playerstate">
+        <h3>{{ player3 }}</h3>
+        <div id="player3"></div>
+    </div>
+    <div class="playerstate">
+        <h3>{{ player4 }}</h3>
+        <div id="player4"></div>
+    </div>
 </div>
 
 <h2>History</h2>
@@ -280,18 +337,13 @@ window.onload = function () {
 
 <h2>Chucks</h2>
 <div class="chuck">
-    <span id="chuck"></span>
+    <span id="chuck"></span><br>
     <input type="button" value="Start/stop" onclick="ui_chuck()" />
 </div>
 <div class="chuck_history">
     <div id="chuck_history">
     </div>
 </div>
-
-<form method="post" action="{% url 'game_save' pk=game.pk %}">{% csrf_token %}
-    <input type="hidden" name="data" value="" />
-    <input type="submit" onclick="ui_save(this.form)" value="Upload game" />
-</form>
 
 
 
