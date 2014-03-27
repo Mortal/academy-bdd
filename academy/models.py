@@ -29,3 +29,4 @@ class Participant(models.Model):
 class Chuck(models.Model):
     participant = models.ForeignKey(Participant)
     time = models.IntegerField(help_text='Chuck time in milliseconds')
+    card = models.CharField(max_length=2)
