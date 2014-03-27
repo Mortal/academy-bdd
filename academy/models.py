@@ -23,8 +23,8 @@ class Participant(models.Model):
     average = models.FloatField(blank=True, null=True)
 
     class Meta:
-        ordering = ('game', 'player', 'position')
-        unique_together =(('player','game','position'),)
+        ordering = ('game', 'position')
+        unique_together = (('game', 'position'),)
 
 class Chuck(models.Model):
     participant = models.ForeignKey(Participant)
