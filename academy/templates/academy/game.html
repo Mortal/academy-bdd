@@ -1,3 +1,4 @@
+{% load academy %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -6,33 +7,52 @@
 body {
     font-family: sans-serif;
 }
+.suit_hearts, .suit_diams {
+    color: #f33;
+}
+.number_A {
+    font-weight: bold;
+    color: blue;
+}
 </style>
 </head>
 <body>
 <h1>Game stats</h1>
 <p>Started: {{ game.start_time }}</p>
 <p>Ended: {{ game.end_time }}</p>
-<p>Played between:</p>
-<ul>
-    {% for participant in participants %}
+<p>Final standings:</p>
+<ol>
+    {% for participant in standings %}
     <li>
         {{ participant.player }}:
         {{ participant.sips }} sips
-        (average {{ participant.average }})
+        (average {{ participant.average|floatformat:2 }})
     </li>
     {% endfor %}
-</ul>
+</ol>
 <p>Chucks:</p>
-<ul>
-    {% for chuck in chucks %}
-    <li>{{ chuck.participant.player }}: {{ chuck.time }} ms</li>
-    {% endfor %}
-</ul>
-<p>Cards:</p>
-<p>
-{% for card in cards %}
-{{ card }},
+{% for chuck in chucks %}
+<div>{{ chuck.card | card_html }} {{ chuck.participant.player }}: {{ chuck.seconds | floatformat:3 }} s</div>
 {% endfor %}
-</p>
+<p>Cards:</p>
+<table style="text-align: center">
+    <col span="{{ playercount }}" width="80" />
+<thead>
+<tr>
+    {% for player in players %}
+    <th>{{ player }}</th>
+    {% endfor %}
+</tr>
+</thead>
+<tbody>
+{% for round in cardrounds %}
+<tr>
+    {% for card in round %}
+    <td>{{ card | card_html }}</td>
+    {% endfor %}
+</tr>
+{% endfor %}
+</tbody>
+</table>
 </body>
 </html>

@@ -124,13 +124,20 @@ class GameView(V.TemplateView):
     def get_context_data(self, **kwargs):
         data = super(GameView, self).get_context_data(**kwargs)
         game = self.get_game()
-        participants = list(game.participant_set.all())
+        participants = game.participant_set.all()
+        standings = participants.order_by('-sips')
         players = [p.player for p in participants]
         chucks = list(models.Chuck.objects.filter(participant__game=game))
+        for chuck in chucks:
+            chuck.seconds = chuck.time / 1000
+        cards = game.cards.split(',')
         data['game'] = game
         data['cards'] = game.cards.split(',')
-        data['participants'] = participants
+        data['cardrounds'] = [cards[i:i+len(players)]
+                for i in range(0, len(cards), len(players))]
+        data['standings'] = standings
         data['players'] = players
+        data['playercount'] = len(players)
         data['chucks'] = chucks
 
         return data
