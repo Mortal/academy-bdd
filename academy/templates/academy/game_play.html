@@ -22,20 +22,35 @@ SUITS = [
 ACE = 14;
 SIPS = 14;
 
-function Game(elem_by_id) {
+function Game(elem_by_id, config) {
     this.el_deck = elem_by_id('deck');
     this.el_history = elem_by_id('history');
     this.el_chuck = elem_by_id('chuck');
     this.el_chuck_history = elem_by_id('chuck_history');
     this.el_upload_button = elem_by_id('upload_button');
+    this.players = config['players'];
     this.deck = make_shuffled_deck();
     this.chucks = [];
     this.history = [];
     this.times = [];
     this.chuck_history = [];
+    var state_holder = elem_by_id('playerstates');
     this.el_state = [];
-    for (var i = 1; i <= PLAYERS; ++i) {
-        this.el_state.push(elem_by_id('player'+i));
+    for (var i = 0; i < this.players.length; ++i) {
+	var column = document.createElement('div');
+	column.className = 'statecolumn';
+	var el_player_state = document.createElement('div');
+	el_player_state.className = 'playerstate';
+	var divs = {};
+	var classNames = ['position', 'name', 'beers', 'average', 'total'];
+	for (var j = 0; j < classNames.length; ++j) {
+	    var div = document.createElement('div');
+	    div.className = classNames[j];
+	    divs[classNames[j]] = div;
+	    el_player_state.appendChild(div);
+	}
+	column.appendChild(el_player_state);
+	this.el_state.push(divs);
     }
 
     this.render();
@@ -157,6 +172,7 @@ function round_100(n) {
 }
 
 Game.prototype.render_state = function Game_render_state() {
+    var PLAYERS = this.players.length;
     for (var i = 0; i < PLAYERS; ++i) {
         var sips = 0;
         var n = 0;
@@ -253,7 +269,9 @@ function make_shuffled_deck() {
 }
 
 window.onload = function () {
-    window.academy_game = new Game(function (i) { return document.getElementById(i); });
+    var elem_by_id = function (i) { return document.getElementById(i); };
+    var game_config = JSON.parse(elem_by_id('game_configuration').value);
+    window.academy_game = new Game(elem_by_id, game_config);
     window.ui_draw = function () { window.academy_game.ui_draw(); };
     window.ui_chuck = function () { window.academy_game.ui_chuck(); };
     window.ui_save = function (form) { window.academy_game.ui_save(form); };
@@ -288,11 +306,16 @@ body {
     margin: 16px 0;
 }
 
+.statecolumn {
+    width: 25%;
+    float: left;
+}
+
 .playerstate {
-    width: 200px;
-    display: inline-block;
     padding: 8px;
+    margin-right: 8px;
     border: 1px solid black;
+    text-align: center;
 }
 
 .playerstate h3 {
@@ -303,9 +326,15 @@ h2 {
     clear: both;
 }
 
+#game_configuration {
+    display: none;
+}
+
 </style>
 </head>
 <body>
+
+<textarea id="game_configuration">{{ game_json }}</textarea>
 
 <form id="upload_button" method="post" action="{% url 'game_save' pk=game.pk %}">{% csrf_token %}
     <input type="hidden" name="data" value="" />
@@ -323,23 +352,19 @@ h2 {
     <div class="remainder"><span id="deck"></span></div>
 </div>
 
-<div class="state">
+<div class="state" id="playerstates">
+<div class="statecolumn">
     <div class="playerstate">
-        <h3>{{ player1 }}</h3>
-        <div id="player1"></div>
+	<div class="position">2.</div>
+        <div class="name">{{ player1 }}</div>
     </div>
+</div>
+<div class="statecolumn">
     <div class="playerstate">
-        <h3>{{ player2 }}</h3>
-        <div id="player2"></div>
+	<div class="position">2.</div>
+        <div class="name">{{ player2 }}</div>
     </div>
-    <div class="playerstate">
-        <h3>{{ player3 }}</h3>
-        <div id="player3"></div>
-    </div>
-    <div class="playerstate">
-        <h3>{{ player4 }}</h3>
-        <div id="player4"></div>
-    </div>
+</div>
 </div>
 
 <h2>History</h2>

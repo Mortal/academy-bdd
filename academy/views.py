@@ -96,8 +96,13 @@ class GamePlayView(V.DetailView):
     def get_context_data(self, **kwargs):
         data = super(GamePlayView, self).get_context_data(**kwargs)
         game = data['game']
-        for i, p in enumerate(models.Participant.objects.filter(game=game)):
+        participants = models.Participant.objects.filter(game=game)
+        for i, p in enumerate(participants):
             data['player%d' % (i+1)] = p.player
+        config = {
+            'players': [str(p.player) for p in participants],
+        }
+        data['game_json'] = json.dumps(config)
         return data
 
 class GameView(V.TemplateView):
