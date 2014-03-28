@@ -17,11 +17,11 @@ class GameCreateView(V.FormView):
         game = models.Game()
         game.save()
         for p in range(4):
-            participant = Participant(
+            participant = models.Participant(
                     game=game, position=p,
-                    player=getattr(form, 'player%d' % p))
+                    player=form.cleaned_data['player%d' % p])
             participant.save()
-        return sc.redirect('game_settings', pk=game.pk)
+        return sc.redirect('game_play', pk=game.pk)
 
 class GameListView(V.ListView):
     model = models.Game
@@ -31,10 +31,12 @@ class GameSaveView(V.View):
         data = json.loads(request.POST['data'])
         # data = {
         #     'cards': ['H2','C9','DA', ... 52 in total],
+        #     'cardtimes': [52 x msepoch],
         #     'chucks': [
         #         {'player': <integer in [0,3]>,
         #          'suit': <integer in [0,3]>,
-        #          'milliseconds': <integer>},
+        #          'start': msepoch,
+        #          'stop': msepoch},
         #         3 more...]
         # }
 
@@ -50,13 +52,21 @@ class GameSaveView(V.View):
             numbers = {idx+2: n for idx, n in enumerate('23456789TJQKA')}
             return suits[card['suit']]+numbers[card['number']]
 
-        cards = [parse_card(s) for s in data['cards']]
-
-        game.cards = ','.join(card_to_str(card) for card in cards)
-        game.end_time = datetime.datetime.now()
-        game.save()
-
         participants = list(game.participant_set.all())
+        PLAYERS = len(participants)
+
+        cards = [parse_card(s) for s in data['cards']]
+        for idx, card in enumerate(cards):
+            ts = data['cardtimes'][idx]
+            t = datetime.datetime.fromtimestamp(ts // 1000)
+            t = t.replace(microseconds=1000*(ts % 1000))
+            DrawnCard(
+                    participant=participants[idx % PLAYERS],
+                    time=t,
+                    card=card_to_str(card),
+                    position=idx).save()
+
+        game.save()
 
         for idx, participant in enumerate(participants):
             pcards = cards[idx::4]

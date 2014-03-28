@@ -1,5 +1,20 @@
 from django.db import models
 
+SUITS = [dict(zip(('letter', 'name', 'color'), values)) for values in (
+    # Classic four suits
+    # Black/red primary
+    ['S', 'spades', 'black'],
+    ['H', 'hearts', 'red'],
+    # Black/red secondary
+    ['C', 'clubs', 'black'],
+    ['D', 'diamonds', 'red'],
+    # Suits as suggested by R. Wayne Schmittberger, see enwiki:Suit [cards]
+    ['B', 'beasts', 'red'], # spades with horns and tail (devil)
+    ['V', 'valentines', 'red'], # hearts with an arrow through
+    ['L', 'leaves', 'green'], # clubs with a rounded bottom (lucky cloverleaf)
+    ['K', 'kites', 'green'] # diamonds with a cross through
+)]
+
 class Game(models.Model):
     def __str__(self):
         participants = list(self.participant_set.all())

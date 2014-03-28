@@ -5,7 +5,20 @@
 <title>Academy BDD</title>
 <script>
 PLAYERS = 4;
-SUITS = 4;
+SUITS = [
+    // Classic four suits
+    // Black/red primary
+    ['S', 'spades', 'black'],
+    ['H', 'hearts', 'red'],
+    // Black/red secondary
+    ['C', 'clubs', 'black'],
+    ['D', 'diamonds', 'red'],
+    // Suits as suggested by R. Wayne Schmittberger, see enwiki:Suit [cards]
+    ['B', 'beasts', 'red'], // spades with horns and tail (devil)
+    ['V', 'valentines', 'red'], // hearts with an arrow through
+    ['L', 'leaves', 'green'], // clubs with a rounded bottom (lucky cloverleaf)
+    ['K', 'kites', 'green'] // diamonds with a cross through
+].map(function (a) { return {letter: a[0], name: a[1], color: a[2]}; });
 ACE = 14;
 SIPS = 14;
 
@@ -18,6 +31,7 @@ function Game(elem_by_id) {
     this.deck = make_shuffled_deck();
     this.chucks = [];
     this.history = [];
+    this.times = [];
     this.chuck_history = [];
     this.el_state = [];
     for (var i = 1; i <= PLAYERS; ++i) {
@@ -44,11 +58,12 @@ Game.prototype.ui_draw = function Game_ui_draw() {
 Game.prototype.ui_chuck = function Game_ui_chuck() {
     if (!this.is_chucking) return;
     if (!this.chuck_start) {
-        this.chuck_start = new Date();
+        this.chuck_start = new Date().getTime();
         this.start_chuck_timer();
     } else {
+        var chuck_stop = new Date().getTime();
         this.stop_chuck_timer();
-        var milliseconds = new Date().getTime() - this.chuck_start;
+        var milliseconds = chuck_stop - this.chuck_start;
         this.set_chuck(milliseconds);
 
         this.is_chucking = false;
@@ -57,7 +72,8 @@ Game.prototype.ui_chuck = function Game_ui_chuck() {
         this.chuck_history.push({
             player: (this.history.length - 1) % PLAYERS,
             card: this.history[this.history.length-1],
-            milliseconds: milliseconds
+            start: this.chuck_start,
+            stop: chuck_stop
         });
         this.render();
     }
@@ -70,7 +86,8 @@ Game.prototype.ui_save = function Game_ui_save(form) {
         data['chucks'].push({
             'participant': c.player,
             'suit': card_to_suit(c.card),
-            'milliseconds': c.milliseconds
+            'start': c.start,
+            'stop': c.stop
         });
     }
     form.data.value = JSON.stringify(data);
@@ -122,7 +139,7 @@ Game.prototype.render = function Game_render() {
 
 Game.prototype.render_deck = function Game_render_deck() {
     var s = [];
-    for (var suit = 0; suit < SUITS; ++suit) {
+    for (var suit = 0; suit < SUITS.length; ++suit) {
         var row = [];
         for (var n = 2; n <= ACE; ++n) {
             var c = make_card(suit, n);
@@ -210,7 +227,7 @@ function card_to_number(card) {
 
 function make_deck() {
     deck = [];
-    for (var suit = 0; suit < SUITS; ++suit) {
+    for (var suit = 0; suit < SUITS.length; ++suit) {
         for (var n = 2; n <= ACE; ++n) {
             var c = make_card(suit, n);
             deck.push(c);
