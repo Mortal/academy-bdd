@@ -9,11 +9,18 @@ from django.core.urlresolvers import reverse
 class FrontView(V.TemplateView):
     template_name = 'front.html'
 
-class GameCreateView(V.View):
-    def post(self, request):
+class GameCreateView(V.FormView):
+    template_name = 'academy/game_create.html'
+    form_class = forms.GameCreateForm
+
+    def form_valid(self, form):
         game = models.Game()
         game.save()
-
+        for p in range(4):
+            participant = Participant(
+                    game=game, position=p,
+                    player=getattr(form, 'player%d' % p))
+            participant.save()
         return sc.redirect('game_settings', pk=game.pk)
 
 class GameListView(V.ListView):
@@ -61,7 +68,7 @@ class GameSaveView(V.View):
         n = chucks.count()
         chucks.delete()
         if n > 0:
-            logging.warning("GameSettingsView: Deleted %d chucks for game %s" % (n, game))
+            logging.warning("GameSaveView: Deleted %d chucks for game %s" % (n, game))
 
         for chuckdata in data['chucks']:
             participant = participants[int(chuckdata['participant'])]
@@ -71,46 +78,13 @@ class GameSaveView(V.View):
 
         return sc.redirect('game', pk=game.pk)
 
-class GameSettingsView(V.FormView):
-    form_class = forms.GameSettingsForm
-    template_name = 'academy/game_settings.html'
-
-    def get_context_data(self, **kwargs):
-        data = super(GameSettingsView, self).get_context_data(**kwargs)
-        data['game'] = self.get_game()
-        return data
-
-    def get_game(self):
-        return sc.get_object_or_404(models.Game, pk=self.kwargs['pk'])
-
-    def form_valid(self, form):
-        game = self.get_game()
-        participants = models.Participant.objects.filter(game=game)
-        n = participants.count()
-        participants.delete()
-        if n > 0:
-            logging.warning("GameSettingsView: Deleted %d participants for game %s" % (n, game))
-        n = 4
-        for i in range(n):
-            player = form.cleaned_data['player%d' % (i+1)]
-            part = models.Participant(game=game, player=player, position=i)
-            part.save()
-
-        game.start_time = datetime.datetime.now()
-        game.save()
-
-        return sc.redirect('game_play', pk=game.pk)
-
-class GamePlayView(V.TemplateView):
+class GamePlayView(V.DetailView):
     template_name = 'academy/game_play.html'
-
-    def get_game(self):
-        return sc.get_object_or_404(models.Game, pk=self.kwargs['pk'])
+    model = models.Game
 
     def get_context_data(self, **kwargs):
         data = super(GamePlayView, self).get_context_data(**kwargs)
-        game = self.get_game()
-        data['game'] = game
+        game = data['game']
         for i, p in enumerate(models.Participant.objects.filter(game=game)):
             data['player%d' % (i+1)] = p.player
         return data

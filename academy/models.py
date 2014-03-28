@@ -1,12 +1,13 @@
 from django.db import models
 
 class Game(models.Model):
-    start_time = models.DateTimeField(null=True, blank=True)
-    end_time = models.DateTimeField(null=True, blank=True)
-    cards = models.CharField(max_length=52*3-1)
-
-    def is_started(self):
-        return bool(self.start_time)
+    def __str__(self):
+        participants = list(self.participant_set.all())
+        if participants:
+            return "Game between %s" % ', '.join(str(p.player)
+                    for p in participants)
+        else:
+            return "New game %d" % self.pk
 
 class Player(models.Model):
     nick = models.CharField(max_length=40)
@@ -33,7 +34,7 @@ class DrawnCard(models.Model):
     position = models.IntegerField()
 
     class Meta:
-        ordering = ('game', 'position')
+        ordering = ('participant__game', 'position')
 
 class Chuck(models.Model):
     participant = models.ForeignKey(Participant)

@@ -1,8 +1,6 @@
-<form method="post" action="{% url 'game_create' %}">{% csrf_token %}
-    <input type="submit" value="New game" />
-</form>
+<p><a href="{% url 'game_create' %}">New game</a></p>
 <ul>
 {% for game in game_list %}
-<li><a href="{% url 'game' pk=game.pk %}">{{ game.start_time }}</a></li>
+<li><a href="{% url 'game' pk=game.pk %}">{{ game }}</a></li>
 {% endfor %}
 </ul>
