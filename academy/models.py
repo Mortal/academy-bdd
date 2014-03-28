@@ -26,7 +26,18 @@ class Participant(models.Model):
         ordering = ('game', 'position')
         unique_together = (('game', 'position'),)
 
+class DrawnCard(models.Model):
+    participant = models.ForeignKey(Participant)
+    time = models.DateTimeField()
+    card = models.CharField(max_length=2)
+    position = models.IntegerField()
+
+    class Meta:
+        ordering = ('game', 'position')
+
 class Chuck(models.Model):
     participant = models.ForeignKey(Participant)
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
     time = models.IntegerField(help_text='Chuck time in milliseconds')
     card = models.CharField(max_length=2)
