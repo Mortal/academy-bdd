@@ -1,3 +1,4 @@
+from django.core import exceptions
 from django.db import models
 from django.contrib import auth
 from django.utils.six import with_metaclass
@@ -25,7 +26,7 @@ class Card(object):
     def __str__(self):
         numbers = '23456789TJQKA'
         if 2 <= self.number <= 14:
-            return '%s%s' % (self.suit, numbers[self.number-1])
+            return '%s%s' % (self.suit, numbers[self.number-2])
         return '??'
 
     @classmethod
@@ -34,7 +35,7 @@ class Card(object):
             raise ValueError("Suits should be in [1, %d], not %r"
                     % (len(SUITS), suits))
         return [cls(suit=suit['letter'], number=number)
-                for suit in SUITS for number in range(2, 15)]
+                for suit in SUITS[:suits] for number in range(2, 15)]
 
 class CardField(with_metaclass(models.SubfieldBase, models.Field)):
     description = "A single card (suit + number)"
@@ -51,11 +52,11 @@ class CardField(with_metaclass(models.SubfieldBase, models.Field)):
         numbers = dict(zip('23456789TJQKA', range(2,15)))
         suits = {suit['letter']: suit['letter'] for suit in SUITS}
         try:
-            number_string, suit_string = value
+            suit_string, number_string = value
             return Card(suit=suits[suit_string],
                     number=numbers[number_string])
         except (KeyError, ValueError):
-            raise ValidationError('Invalid input for a Card instance')
+            raise exceptions.ValidationError('Invalid input for a Card instance')
 
     def get_prep_value(self, value):
         if value is None:
@@ -63,7 +64,7 @@ class CardField(with_metaclass(models.SubfieldBase, models.Field)):
         elif isinstance(value, Card):
             return str(value)
         else:
-            raise ValidationError('Invalid Card value %r of type %s'
+            raise exceptions.ValidationError('Invalid Card value %r of type %s'
                     % (value, type(value)))
 
     def get_internal_type(self):
@@ -101,7 +102,7 @@ class Participant(models.Model):
 class DrawnCard(models.Model):
     participant = models.ForeignKey(Participant)
     time = models.DateTimeField()
-    card = models.CardField()
+    card = CardField()
     position = models.IntegerField()
 
     class Meta:
@@ -112,4 +113,4 @@ class Chuck(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     time = models.IntegerField(help_text='Chuck time in milliseconds')
-    card = models.CardField()
+    card = CardField()

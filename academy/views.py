@@ -109,15 +109,19 @@ class GameView(V.TemplateView):
     def get_context_data(self, **kwargs):
         data = super(GameView, self).get_context_data(**kwargs)
         game = self.get_game()
-        participants = game.participant_set.all()
-        standings = participants.order_by('-sips')
+        participants = list(game.participant_set.all())
+        for p in participants:
+            drawncards = list(p.drawncard_set.all())
+            p.sips = sum(card.card.number for card in drawncards)
+            p.average = p.sips / len(drawncards) if drawncards else 0
+        standings = sorted(participants, key=lambda p: -p.sips)
         players = [p.player for p in participants]
         chucks = list(models.Chuck.objects.filter(participant__game=game))
         for chuck in chucks:
             chuck.seconds = chuck.time / 1000
-        cards = game.cards.split(',')
+        cards = list(models.DrawnCard.objects.filter(participant__game=game))
         data['game'] = game
-        data['cards'] = game.cards.split(',')
+        data['cards'] = cards
         data['cardrounds'] = [cards[i:i+len(players)]
                 for i in range(0, len(cards), len(players))]
         data['standings'] = standings
@@ -125,17 +129,23 @@ class GameView(V.TemplateView):
         data['playercount'] = len(players)
         data['chucks'] = chucks
 
+        try:
+            game.start_time = cards[0].time
+            game.end_time = cards[-1].time
+        except IndexError:
+            game.start_time = game.end_time = None
+
         return data
 
 class GameSimulateView(V.View):
-    def post(self, players=4):
-        game = Game()
+    def post(self, request, players=4):
+        game = models.Game()
         game.save()
 
         all_players = list(models.Player.objects.all())
         random.shuffle(all_players)
 
-        participants = [Participant(game=game, player=p, position=i)
+        participants = [models.Participant(game=game, player=p, position=i)
                 for i, p in enumerate(all_players[0:players])]
 
         for p in participants:
@@ -149,7 +159,7 @@ class GameSimulateView(V.View):
         time = datetime.datetime.now()
         for i, card in enumerate(cards):
             p = participants[i % len(participants)]
-            drawncard = DrawnCard(
+            drawncard = models.DrawnCard(
                     participant=p,
                     time=time,
                     card=card,
@@ -158,7 +168,7 @@ class GameSimulateView(V.View):
             time += datetime.timedelta(seconds=next_event_time())
             if card.number == 14:
                 chuck_time = int(5000 + random.random()*10000)
-                chuck = Chuck(participant=p,
+                chuck = models.Chuck(participant=p,
                         start_time=time,
                         end_time=time + datetime.timedelta(seconds=chuck_time/1000),
                         time=chuck_time,
