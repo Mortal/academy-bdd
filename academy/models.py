@@ -3,19 +3,29 @@ from django.db import models
 from django.contrib import auth
 from django.utils.six import with_metaclass
 
-SUITS = [dict(zip(('letter', 'name', 'color'), values)) for values in (
+SUITS = [dict(zip(('letter', 'name', 'color', 'symbol'), values)) for values in (
     # Classic four suits
     # Black/red primary
-    ['S', 'spades', 'black'],
-    ['H', 'hearts', 'red'],
+    ['S', 'spades', 'black', '♠'],
+    ['H', 'hearts', 'red', '♥'],
     # Black/red secondary
-    ['C', 'clubs', 'black'],
-    ['D', 'diamonds', 'red'],
+    ['C', 'clubs', 'black', '♣'],
+    ['D', 'diamonds', 'red', '♦'],
+
+    # Ideas for additional suits:
+    # Bullets, Suns, Houses, Blocks, Triangles, Arrows
+    # Shields, Moons ☾, Suns ☀, Stars ★
+
     # Suits as suggested by R. Wayne Schmittberger, see enwiki:Suit [cards]
-    ['B', 'beasts', 'red'], # spades with horns and tail (devil)
-    ['V', 'valentines', 'red'], # hearts with an arrow through
-    ['L', 'leaves', 'green'], # clubs with a rounded bottom (lucky cloverleaf)
-    ['K', 'kites', 'green'] # diamonds with a cross through
+    #['B', 'beasts', 'red'], # spades with horns and tail (devil)
+    #['V', 'valentines', 'red'], # hearts with an arrow through
+    #['L', 'leaves', 'green'], # clubs with a rounded bottom (lucky cloverleaf)
+    #['K', 'kites', 'green'] # diamonds with a cross through
+
+    ['K', 'kites', 'blue', '⚵'],
+    ['F', 'flowers', 'green', '⚘'],
+    ['A', 'arrows', 'blue', '↑'],
+    ['T', 'stars', 'green', '★'],
 )]
 
 class Card(object):
@@ -100,6 +110,7 @@ class Participant(models.Model):
         unique_together = (('game', 'position'),)
 
 class DrawnCard(models.Model):
+    game = models.ForeignKey(Game)
     participant = models.ForeignKey(Participant)
     time = models.DateTimeField()
     card = CardField()
@@ -107,6 +118,7 @@ class DrawnCard(models.Model):
 
     class Meta:
         ordering = ('participant__game', 'position')
+        unique_together = (('game', 'position'),)
 
 class Chuck(models.Model):
     participant = models.ForeignKey(Participant)

@@ -4,8 +4,10 @@
 <head>
 <title>Academy BDD</title>
 <script>
-PLAYERS = 4;
-SUITS = [
+var config = ({{ game_json|safe }});
+PLAYERS = config['players'].length;
+SUITS = config['suits'].map(function (a) { return {letter: a[0], name: a[1], color: a[2], symbol: a[3]}; });
+/*[
     // Classic four suits
     // Black/red primary
     ['S', 'spades', 'black'],
@@ -19,8 +21,53 @@ SUITS = [
     ['L', 'leaves', 'green'], // clubs with a rounded bottom (lucky cloverleaf)
     ['K', 'kites', 'green'] // diamonds with a cross through
 ].map(function (a) { return {letter: a[0], name: a[1], color: a[2]}; });
+*/
 ACE = 14;
 SIPS = 14;
+
+function make_text_template(s) {
+    return function (dest, dict) {
+        dest.appendChild(document.createTextNode(s));
+    };
+}
+
+function make_el_template(children, tagName, className) {
+    return function (dest, dict) {
+        var el = document.createElement(tagName);
+        for (var i = 0, l = children.length; i < l; ++i) {
+            children[i](el, dict);
+        }
+        if (className) {
+            el.className = className;
+            dict[className] = el;
+        }
+        dest.appendChild(el);
+    };
+}
+
+function make_template(e) {
+    if (e.nodeType == 3) { // Text
+        return make_text_template(e.nodeValue);
+    } else if (e.nodeType == 1) { // Element
+        var children = [].slice.call(e.childNodes);
+        children = children.map(make_template);
+        var className = e.className;
+        return make_el_template(children, e.tagName.toLowerCase(), className);
+    }
+}
+
+function unfold_template(e, l) {
+    var instances = [];
+    var tpl = make_template(e.firstElementChild);
+    var container = e.parentNode;
+    container.removeChild(e);
+    for (var p = 0; p < l; ++p) {
+        var dict = {};
+        tpl(container, dict);
+        instances.push(dict);
+    }
+    return instances;
+}
 
 function Game(elem_by_id, config) {
     this.el_deck = elem_by_id('deck');
@@ -29,29 +76,15 @@ function Game(elem_by_id, config) {
     this.el_chuck_history = elem_by_id('chuck_history');
     this.el_upload_button = elem_by_id('upload_button');
     this.players = config['players'];
-    this.deck = make_shuffled_deck();
+    this.suits = this.players.length;
+    this.deck = make_shuffled_deck(this.suits);
     this.chucks = [];
     this.history = [];
     this.times = [];
     this.chuck_history = [];
-    var state_holder = elem_by_id('playerstates');
-    this.el_state = [];
-    for (var i = 0; i < this.players.length; ++i) {
-	var column = document.createElement('div');
-	column.className = 'statecolumn';
-	var el_player_state = document.createElement('div');
-	el_player_state.className = 'playerstate';
-	var divs = {};
-	var classNames = ['position', 'name', 'beers', 'average', 'total'];
-	for (var j = 0; j < classNames.length; ++j) {
-	    var div = document.createElement('div');
-	    div.className = classNames[j];
-	    divs[classNames[j]] = div;
-	    el_player_state.appendChild(div);
-	}
-	column.appendChild(el_player_state);
-	this.el_state.push(divs);
-    }
+
+    this.el_state = unfold_template(elem_by_id('playerstatetemplate'),
+                                    this.players.length);
 
     this.render();
 
@@ -63,6 +96,7 @@ Game.prototype.ui_draw = function Game_ui_draw() {
     if (this.deck.length == 0) return;
     var card = this.deck.pop();
     this.history.push(card);
+    this.times.push(new Date().getTime());
     this.render();
     if (card_to_number(card) == ACE) {
         this.is_chucking = true;
@@ -81,26 +115,28 @@ Game.prototype.ui_chuck = function Game_ui_chuck() {
         var milliseconds = chuck_stop - this.chuck_start;
         this.set_chuck(milliseconds);
 
-        this.is_chucking = false;
-        this.chuck_start = null;
-
         this.chuck_history.push({
             player: (this.history.length - 1) % PLAYERS,
             card: this.history[this.history.length-1],
             start: this.chuck_start,
-            stop: chuck_stop
+            stop: chuck_stop,
+            milliseconds: milliseconds
         });
+
+        this.is_chucking = false;
+        this.chuck_start = null;
+
         this.render();
     }
 };
 
 Game.prototype.ui_save = function Game_ui_save(form) {
-    var data = {'cards': this.history, 'chucks': []};
+    var data = {'cards': this.history, 'cardtimes': this.times, 'chucks': []};
     for (var i = 0; i < this.chuck_history.length; ++i) {
         var c = this.chuck_history[i];
         data['chucks'].push({
             'participant': c.player,
-            'suit': card_to_suit(c.card),
+            'card': c.card,
             'start': c.start,
             'stop': c.stop
         });
@@ -154,7 +190,7 @@ Game.prototype.render = function Game_render() {
 
 Game.prototype.render_deck = function Game_render_deck() {
     var s = [];
-    for (var suit = 0; suit < SUITS.length; ++suit) {
+    for (var suit = 0; suit < this.suits; ++suit) {
         var row = [];
         for (var n = 2; n <= ACE; ++n) {
             var c = make_card(suit, n);
@@ -171,30 +207,64 @@ function round_100(n) {
     return s.replace(/([.,]..).*/, '$1');
 }
 
+function capitalize(s) {
+    return s.charAt(0).toUpperCase() + s.substring(1, s.length);
+}
+
+function card_desc(card) {
+    var suit = SUITS[card_to_suit(card)];
+    var suit_name = capitalize(suit.name);
+    var suit_color = suit.color;
+    var numbers = 'Two Three Four Five Six Seven Eight Nine Ten Jack Queen King Ace'.split(' ');
+    var number = card_to_number(card);
+    number_name = numbers[number - 2];
+    return ('<span class="number_'+number+'">'+number_name+'</span> of <span style="color: '+suit_color+'">'+suit_name+'</span>');
+}
+
+function card_symbol(card) {
+    var suit = SUITS[card_to_suit(card)];
+    var suit_symbol = suit.symbol;
+    var n = card_to_number(card);
+    if (n > 10) n = 'JQKA'.charAt(n-11);
+    return ''+suit_symbol+n;
+}
+
 Game.prototype.render_state = function Game_render_state() {
     var PLAYERS = this.players.length;
+    var sips = [];
+    var n = [];
     for (var i = 0; i < PLAYERS; ++i) {
-        var sips = 0;
-        var n = 0;
+        sips.push(0);
+        n.push(0);
         for (var j = i; j < this.history.length; j += PLAYERS) {
-            sips += card_to_number(this.history[j]);
-            ++n;
+            sips[i] += card_to_number(this.history[j]);
+            ++n[i];
         }
-
+    }
+    var positions = new Array(PLAYERS);
+    var standings = sips.slice().map(function (s, i) { return [s, i]; });
+    standings.sort(function (a, b) { return b[0] - a[0]; });
+    for (var i = 0; i < PLAYERS; ++i) {
+        if (i > 0 && standings[i][0] == standings[i-1][0]) {
+            positions[standings[i][1]] = positions[standings[i-1][1]];
+        } else {
+            positions[standings[i][1]] = i+1;
+        }
+    }
+    for (var i = 0; i < PLAYERS; ++i) {
         var card = (this.history.length <= i) ? '' : (
             this.history[PLAYERS * (((this.history.length - i - 1) / PLAYERS) | 0) + i]);
 
-        var beers = (sips / SIPS) | 0;
+        var beers = (sips[i] / SIPS) | 0;
 
-        var remaining_sips = (1 + beers) * SIPS - sips;
+        var remaining_sips = (1 + beers) * SIPS - sips[i];
 
-        var a = [];
-        a.push('Latest card: '+card);
-        a.push('Sips remaining: '+remaining_sips);
-        a.push('Sips so far: '+sips);
-        a.push('Beers so far: '+beers);
-        a.push('Average sips: '+(n ? round_100(sips / n) : ''));
-        this.el_state[i].innerHTML = a.join('<br>');
+        var st = this.el_state[i];
+        st['card'].innerHTML = (card == '') ? '' : card_desc(card);
+        st['name'].textContent = positions[i]+'. '+this.players[i];
+        st['sips'].textContent = sips[i];
+        st['beers'].textContent = beers;
+        st['average'].textContent = (n[i] ? round_100(sips[i] / n[i]) : '0');
     }
 };
 
@@ -213,14 +283,16 @@ Game.prototype.render_chuck_history = function Game_render_chuck_history() {
     var a = [];
     for (var i = 0; i < this.chuck_history.length; ++i) {
         var o = this.chuck_history[i];
-        a.push(o.player+' drew '+o.card+': '+milliseconds_to_string(o.milliseconds));
+        var player = this.players[o.player];
+        var card = card_desc(o.card);
+        a.push(player+' drew '+card+': '+milliseconds_to_string(o.milliseconds));
         a.push('<br>');
     }
     this.el_chuck_history.innerHTML = a.join('');
 };
 
 function suit_to_char(i) {
-    return 'SHCD'.charAt(i);
+    return SUITS[i].letter;
 }
 
 function number_to_char(i) {
@@ -232,7 +304,8 @@ function make_card(suit, n) {
 }
 
 function card_to_suit(card) {
-    var suits = {'S': 0, 'H': 1, 'C': 2, 'D': 3};
+    var suits = {};
+    for (var i = 0; i < SUITS.length; ++i) suits[SUITS[i].letter] = i;
     return suits[card.charAt(0)];
 }
 
@@ -241,9 +314,9 @@ function card_to_number(card) {
     return (ns[card.charAt(1)] || card.charAt(1)) | 0;
 }
 
-function make_deck() {
+function make_deck(suits) {
     deck = [];
-    for (var suit = 0; suit < SUITS.length; ++suit) {
+    for (var suit = 0; suit < suits; ++suit) {
         for (var n = 2; n <= ACE; ++n) {
             var c = make_card(suit, n);
             deck.push(c);
@@ -264,8 +337,8 @@ function shuffled(a) {
     return r;
 }
 
-function make_shuffled_deck() {
-    return shuffled(make_deck());
+function make_shuffled_deck(suits) {
+    return shuffled(make_deck(suits));
 }
 
 window.onload = function () {
@@ -315,11 +388,23 @@ body {
     padding: 8px;
     margin-right: 8px;
     border: 1px solid black;
+}
+
+.playerstate .card {
+    font-weight: bold;
+    text-align: center;
+    height: 1.2em;
+}
+
+.playerstate .name {
+    font-size: 150%;
+    font-weight: bold;
     text-align: center;
 }
 
-.playerstate h3 {
-    margin: 0;
+.playerstate .label {
+    float: left;
+    width: 6em;
 }
 
 h2 {
@@ -353,21 +438,31 @@ h2 {
 </div>
 
 <div class="state" id="playerstates">
-<div class="statecolumn">
-    <div class="playerstate">
-	<div class="position">2.</div>
-        <div class="name">{{ player1 }}</div>
-    </div>
-</div>
-<div class="statecolumn">
-    <div class="playerstate">
-	<div class="position">2.</div>
-        <div class="name">{{ player2 }}</div>
+<div id="playerstatetemplate">
+    <div class="statecolumn">
+        <div class="playerstate">
+            <div class="card"></div>
+            <div class="name"></div>
+            <div>
+                <div class="label">Sips:</div>
+                <div class="sips"></div>
+            </div>
+            <div>
+                <div class="label">Beers:</div>
+                <div class="beers"></div>
+            </div>
+            <div>
+                <div class="label">Average:</div>
+                <div class="average"></div>
+            </div>
+        </div>
     </div>
 </div>
 </div>
 
 <h2>History</h2>
+<table id="history">
+</table>
 <div class="history">
     <div>
         {{ player1 }}

@@ -17,11 +17,12 @@ class GameCreateView(V.FormView):
     def form_valid(self, form):
         game = models.Game()
         game.save()
-        for p in range(4):
-            participant = models.Participant(
-                    game=game, position=p,
-                    player=form.cleaned_data['player%d' % p])
-            participant.save()
+        for p in range(8):
+            if form.cleaned_data.get('player%d' % p):
+                participant = models.Participant(
+                        game=game, position=p,
+                        player=form.cleaned_data['player%d' % p])
+                participant.save()
         return sc.redirect('game_play', pk=game.pk)
 
 class GameListView(V.ListView):
@@ -44,14 +45,17 @@ class GameSaveView(V.View):
         game = sc.get_object_or_404(models.Game, pk=pk)
 
         def parse_card(s):
-            suits = {suit: idx for idx, suit in enumerate('SHCD')}
+            suits = {suit['letter']: idx for idx, suit in enumerate(models.SUITS)}
             numbers = {n: idx+2 for idx, n in enumerate('23456789TJQKA')}
             return {'suit': suits[s[0]], 'number': numbers[s[1]]}
 
         def card_to_str(card):
-            suits = {idx: suit for idx, suit in enumerate('SHCD')}
+            suits = {idx: suit['letter'] for idx, suit in enumerate(models.SUITS)}
             numbers = {idx+2: n for idx, n in enumerate('23456789TJQKA')}
             return suits[card['suit']]+numbers[card['number']]
+
+        def msepoch(ms):
+            return datetime.datetime.fromtimestamp(ms / 1000)
 
         participants = list(game.participant_set.all())
         PLAYERS = len(participants)
@@ -59,9 +63,8 @@ class GameSaveView(V.View):
         cards = [parse_card(s) for s in data['cards']]
         for idx, card in enumerate(cards):
             ts = data['cardtimes'][idx]
-            t = datetime.datetime.fromtimestamp(ts // 1000)
-            t = t.replace(microseconds=1000*(ts % 1000))
-            DrawnCard(
+            t = msepoch(ts)
+            models.DrawnCard(
                     participant=participants[idx % PLAYERS],
                     time=t,
                     card=card_to_str(card),
@@ -84,7 +87,10 @@ class GameSaveView(V.View):
         for chuckdata in data['chucks']:
             participant = participants[int(chuckdata['participant'])]
             chuck = models.Chuck(participant=participant,
-                    time=chuckdata['milliseconds'])
+                    start_time=msepoch(chuckdata['start']),
+                    end_time=msepoch(chuckdata['stop']),
+                    time=chuckdata['stop']-chuckdata['start'],
+                    card=chuckdata['card'])
             chuck.save()
 
         return sc.redirect('game', pk=game.pk)
@@ -101,6 +107,8 @@ class GamePlayView(V.DetailView):
             data['player%d' % (i+1)] = p.player
         config = {
             'players': [str(p.player) for p in participants],
+            'suits': [[suit[a] for a in ('letter', 'name', 'color', 'symbol')]
+                for suit in models.SUITS],
         }
         data['game_json'] = json.dumps(config)
         return data
@@ -128,7 +136,7 @@ class GameView(V.TemplateView):
         data['game'] = game
         data['cards'] = cards
         data['cardrounds'] = [cards[i:i+len(players)]
-                for i in range(0, len(cards), len(players))]
+                for i in range(0, len(cards), len(players))] if players else []
         data['standings'] = standings
         data['players'] = players
         data['playercount'] = len(players)
@@ -144,6 +152,11 @@ class GameView(V.TemplateView):
 
 class GameSimulateView(V.View):
     def post(self, request, players=4):
+        try:
+            players = int(request.POST['players'])
+        except KeyError:
+            pass
+
         game = models.Game()
         game.save()
 
