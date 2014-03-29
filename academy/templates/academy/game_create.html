@@ -1,0 +1,9 @@
+<h1>Create game</h1>
+<form method="post">{% csrf_token %}
+    <ul>
+        {% for field in form.player_fields %}
+        <li>{{ field }}</li>
+        {% endfor %}
+    </ul>
+    <input type="submit" value="Start game" />
+</form>
