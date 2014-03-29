@@ -1,6 +1,7 @@
 import logging
 import datetime
 import json
+import random
 import django.views.generic as V
 from . import models, forms
 from django import shortcuts as sc
@@ -125,6 +126,48 @@ class GameView(V.TemplateView):
         data['chucks'] = chucks
 
         return data
+
+class GameSimulateView(V.View):
+    def post(self, players=4):
+        game = Game()
+        game.save()
+
+        all_players = list(models.Player.objects.all())
+        random.shuffle(all_players)
+
+        participants = [Participant(game=game, player=p, position=i)
+                for i, p in enumerate(all_players[0:players])]
+
+        for p in participants:
+            p.save()
+
+        def next_event_time():
+            return 60 + 30*(random.random()-.5)
+
+        cards = models.Card.deck(suits=players)
+        random.shuffle(cards)
+        time = datetime.datetime.now()
+        for i, card in enumerate(cards):
+            p = participants[i % len(participants)]
+            drawncard = DrawnCard(
+                    participant=p,
+                    time=time,
+                    card=card,
+                    position=i)
+            drawncard.save()
+            time += datetime.timedelta(seconds=next_event_time())
+            if card.number == 14:
+                chuck_time = int(5000 + random.random()*10000)
+                chuck = Chuck(participant=p,
+                        start_time=time,
+                        end_time=time + datetime.timedelta(seconds=chuck_time/1000),
+                        time=chuck_time,
+                        card=card)
+                chuck.save()
+                time += datetime.timedelta(seconds=next_event_time())
+
+        return sc.redirect('game', pk=game.pk)
+
 
 class PlayerCreateView(V.View):
     def post(self, request):

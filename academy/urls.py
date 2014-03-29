@@ -12,6 +12,7 @@ urlpatterns = patterns('',
 
     url(r'^$', views.FrontView.as_view()),
     url(r'^game/$', views.GameListView.as_view(), name='game_list'),
+    url(r'^game/simulate/$', views.GameSimulateView.as_view(), name='game_simulate'),
     url(r'^game/new/$', views.GameCreateView.as_view(), name='game_create'),
     url(r'^game/(?P<pk>\d+)/$', views.GameView.as_view(), name='game'),
     url(r'^game/(?P<pk>\d+)/play/$', views.GamePlayView.as_view(), name='game_play'),

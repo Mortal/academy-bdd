@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib import auth
+from django.utils.six import with_metaclass
 
 SUITS = [dict(zip(('letter', 'name', 'color'), values)) for values in (
     # Classic four suits
@@ -15,7 +17,63 @@ SUITS = [dict(zip(('letter', 'name', 'color'), values)) for values in (
     ['K', 'kites', 'green'] # diamonds with a cross through
 )]
 
+class Card(object):
+    def __init__(self, suit, number):
+        self.suit = suit
+        self.number = number
+
+    def __str__(self):
+        numbers = '23456789TJQKA'
+        if 2 <= self.number <= 14:
+            return '%s%s' % (self.suit, numbers[self.number-1])
+        return '??'
+
+    @classmethod
+    def deck(cls, suits):
+        if not (1 <= suits <= len(SUITS)):
+            raise ValueError("Suits should be in [1, %d], not %r"
+                    % (len(SUITS), suits))
+        return [cls(suit=suit['letter'], number=number)
+                for suit in SUITS for number in range(2, 15)]
+
+class CardField(with_metaclass(models.SubfieldBase, models.Field)):
+    description = "A single card (suit + number)"
+
+    def __init__(self, *args, **kwargs):
+        kwargs['max_length'] = 2
+        super(CardField, self).__init__(*args, **kwargs)
+
+    def to_python(self, value):
+        if value is None:
+            return None
+        if isinstance(value, Card):
+            return value
+        numbers = dict(zip('23456789TJQKA', range(2,15)))
+        suits = {suit['letter']: suit['letter'] for suit in SUITS}
+        try:
+            number_string, suit_string = value
+            return Card(suit=suits[suit_string],
+                    number=numbers[number_string])
+        except (KeyError, ValueError):
+            raise ValidationError('Invalid input for a Card instance')
+
+    def get_prep_value(self, value):
+        if value is None:
+            return None
+        elif isinstance(value, Card):
+            return str(value)
+        else:
+            raise ValidationError('Invalid Card value %r of type %s'
+                    % (value, type(value)))
+
+    def get_internal_type(self):
+        return 'CharField'
+
 class Game(models.Model):
+    @property
+    def sips(self):
+        return 14
+
     def __str__(self):
         participants = list(self.participant_set.all())
         if participants:
@@ -25,6 +83,7 @@ class Game(models.Model):
             return "New game %d" % self.pk
 
 class Player(models.Model):
+    user = models.ForeignKey(auth.models.User, blank=True, null=True)
     nick = models.CharField(max_length=40)
 
     def __str__(self):
@@ -35,9 +94,6 @@ class Participant(models.Model):
     game = models.ForeignKey(Game)
     position = models.IntegerField()
 
-    sips = models.IntegerField(blank=True, null=True)
-    average = models.FloatField(blank=True, null=True)
-
     class Meta:
         ordering = ('game', 'position')
         unique_together = (('game', 'position'),)
@@ -45,7 +101,7 @@ class Participant(models.Model):
 class DrawnCard(models.Model):
     participant = models.ForeignKey(Participant)
     time = models.DateTimeField()
-    card = models.CharField(max_length=2)
+    card = models.CardField()
     position = models.IntegerField()
 
     class Meta:
@@ -56,4 +112,4 @@ class Chuck(models.Model):
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     time = models.IntegerField(help_text='Chuck time in milliseconds')
-    card = models.CharField(max_length=2)
+    card = models.CardField()
