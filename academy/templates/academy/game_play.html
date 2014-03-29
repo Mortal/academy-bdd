@@ -4,33 +4,28 @@
 <head>
 <title>Academy BDD</title>
 <script>
+///////////////////////////////////////////////////////////////////////////////
+// Configuration provided by server side
+///////////////////////////////////////////////////////////////////////////////
+
 var config = ({{ game_json|safe }});
-PLAYERS = config['players'].length;
 SUITS = config['suits'].map(function (a) { return {letter: a[0], name: a[1], color: a[2], symbol: a[3]}; });
-/*[
-    // Classic four suits
-    // Black/red primary
-    ['S', 'spades', 'black'],
-    ['H', 'hearts', 'red'],
-    // Black/red secondary
-    ['C', 'clubs', 'black'],
-    ['D', 'diamonds', 'red'],
-    // Suits as suggested by R. Wayne Schmittberger, see enwiki:Suit [cards]
-    ['B', 'beasts', 'red'], // spades with horns and tail (devil)
-    ['V', 'valentines', 'red'], // hearts with an arrow through
-    ['L', 'leaves', 'green'], // clubs with a rounded bottom (lucky cloverleaf)
-    ['K', 'kites', 'green'] // diamonds with a cross through
-].map(function (a) { return {letter: a[0], name: a[1], color: a[2]}; });
-*/
+
 ACE = 14;
 SIPS = 14;
 
+///////////////////////////////////////////////////////////////////////////////
+// Templates in the HTML layout
+///////////////////////////////////////////////////////////////////////////////
+
+// Used by make_template for DOM text nodes
 function make_text_template(s) {
     return function (dest, dict) {
         dest.appendChild(document.createTextNode(s));
     };
 }
 
+// Used by make_template for DOM elements
 function make_el_template(children, tagName, className) {
     return function (dest, dict) {
         var el = document.createElement(tagName);
@@ -45,6 +40,9 @@ function make_el_template(children, tagName, className) {
     };
 }
 
+// Given an element, return a function (dest, dict) that makes a deep copy of
+// the element into the given dest, storing references to elements by their
+// className in the given dict.
 function make_template(e) {
     if (e.nodeType == 3) { // Text
         return make_text_template(e.nodeValue);
@@ -56,6 +54,8 @@ function make_template(e) {
     }
 }
 
+// Given an element, replace it by l copies using make_template
+// and return a list of dictionaries as returned by make_template()(dest, dict).
 function unfold_template(e, l) {
     var instances = [];
     var tpl = make_template(e.firstElementChild);
@@ -69,7 +69,13 @@ function unfold_template(e, l) {
     return instances;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Game runtime state.
+///////////////////////////////////////////////////////////////////////////////
+
 function Game(elem_by_id, config) {
+    // elem_by_id(x) is document.getElementById(x).
+    // config
     this.el_deck = elem_by_id('deck');
     this.el_history = elem_by_id('history');
     this.el_chuck = elem_by_id('chuck');
@@ -91,6 +97,7 @@ function Game(elem_by_id, config) {
     this.is_chucking = false;
 }
 
+// Button handler: Draw card
 Game.prototype.ui_draw = function Game_ui_draw() {
     if (this.is_chucking) return;
     if (this.deck.length == 0) return;
@@ -104,6 +111,7 @@ Game.prototype.ui_draw = function Game_ui_draw() {
     }
 };
 
+// Button handler: Start/stop chuck timer
 Game.prototype.ui_chuck = function Game_ui_chuck() {
     if (!this.is_chucking) return;
     if (!this.chuck_start) {
@@ -115,6 +123,7 @@ Game.prototype.ui_chuck = function Game_ui_chuck() {
         var milliseconds = chuck_stop - this.chuck_start;
         this.set_chuck(milliseconds);
 
+        var PLAYERS = this.players.length;
         this.chuck_history.push({
             player: (this.history.length - 1) % PLAYERS,
             card: this.history[this.history.length-1],
@@ -130,6 +139,7 @@ Game.prototype.ui_chuck = function Game_ui_chuck() {
     }
 };
 
+// Button handler: Upload game
 Game.prototype.ui_save = function Game_ui_save(form) {
     var data = {'cards': this.history, 'cardtimes': this.times, 'chucks': []};
     for (var i = 0; i < this.chuck_history.length; ++i) {
@@ -144,6 +154,7 @@ Game.prototype.ui_save = function Game_ui_save(form) {
     form.data.value = JSON.stringify(data);
 };
 
+// Button handler: Shuffle
 Game.prototype.ui_shuffle = function Game_ui_shuffle() {
     console.log("Shuffling deck...");
     for (var i = 0; i < 52; ++i) {
@@ -269,6 +280,19 @@ Game.prototype.render_state = function Game_render_state() {
 };
 
 Game.prototype.render_history = function Game_render_history() {
+    var e = this.el_history;
+    if (!e.tHead) {
+        var thead = document.createElement('thead');
+        var row = document.createElement('tr');
+        for (var i = 0; i < this.players.length; ++i) {
+            var cell = document.createElement('th');
+            cell.textContent = this.players[i];
+            row.appendChild(cell);
+        }
+        thead.appendChild(row);
+        e.appendChild(thead);
+    }
+    var PLAYERS = this.players.length;
     var a = [];
     for (var i = 0; i < this.history.length; ++i) {
         if (i == 0) {}
@@ -276,7 +300,6 @@ Game.prototype.render_history = function Game_render_history() {
         else { a.push(', '); }
         a.push(this.history[i]);
     }
-    this.el_history.innerHTML = a.join('');
 };
 
 Game.prototype.render_chuck_history = function Game_render_chuck_history() {
@@ -463,15 +486,6 @@ h2 {
 <h2>History</h2>
 <table id="history">
 </table>
-<div class="history">
-    <div>
-        {{ player1 }}
-        {{ player2 }}
-        {{ player3 }}
-        {{ player4 }}
-    </div>
-    <span id="history"></span>
-</div>
 
 <h2>Chucks</h2>
 <div class="chuck">

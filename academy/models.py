@@ -120,6 +120,10 @@ class DrawnCard(models.Model):
         ordering = ('participant__game', 'position')
         unique_together = (('game', 'position'),)
 
+    def save(self, *args, **kwargs):
+        self.game = self.participant.game
+        super(DrawnCard, self).save(*args, **kwargs)
+
 class Chuck(models.Model):
     participant = models.ForeignKey(Participant)
     start_time = models.DateTimeField()
