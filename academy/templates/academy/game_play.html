@@ -199,18 +199,32 @@ Game.prototype.render = function Game_render() {
         (this.deck.length == 0) ? '' : 'none');
 };
 
+function render_rows(e, rows, celltype) {
+    e.innerHTML = '';
+    for (var i = 0; i < rows.length; ++i) {
+        var row = document.createElement('tr');
+        for (var j = 0; j < rows[i].length; ++j) {
+            var cell = document.createElement(celltype);
+            cell.innerHTML = rows[i][j];
+            row.appendChild(cell);
+        }
+        e.appendChild(row);
+    }
+}
+
 Game.prototype.render_deck = function Game_render_deck() {
+    var rows = [];
     var s = [];
     for (var suit = 0; suit < this.suits; ++suit) {
         var row = [];
         for (var n = 2; n <= ACE; ++n) {
             var c = make_card(suit, n);
-            if (this.deck.indexOf(c) == -1) row.push('--');
-            else row.push(c);
+            if (this.deck.indexOf(c) == -1) row.push('&mdash;');
+            else row.push(card_symbol(c));
         }
-        s.push(row.join(' '));
+        rows.push(row);
     }
-    this.el_deck.innerHTML = s.join('<br>');
+    render_rows(this.el_deck, rows, 'td');
 };
 
 function round_100(n) {
@@ -234,10 +248,10 @@ function card_desc(card) {
 
 function card_symbol(card) {
     var suit = SUITS[card_to_suit(card)];
-    var suit_symbol = suit.symbol;
     var n = card_to_number(card);
     if (n > 10) n = 'JQKA'.charAt(n-11);
-    return ''+suit_symbol+n;
+    return ('<b style="color: '+suit.color+'">'
+            +suit.symbol+'</b><b class="number_'+n+'">'+n+'</b>');
 }
 
 Game.prototype.render_state = function Game_render_state() {
@@ -276,6 +290,7 @@ Game.prototype.render_state = function Game_render_state() {
         st['sips'].textContent = sips[i];
         st['beers'].textContent = beers;
         st['average'].textContent = (n[i] ? round_100(sips[i] / n[i]) : '0');
+        st['playerstate'].className = 'playerstate position'+positions[i];
     }
 };
 
@@ -283,23 +298,18 @@ Game.prototype.render_history = function Game_render_history() {
     var e = this.el_history;
     if (!e.tHead) {
         var thead = document.createElement('thead');
-        var row = document.createElement('tr');
-        for (var i = 0; i < this.players.length; ++i) {
-            var cell = document.createElement('th');
-            cell.textContent = this.players[i];
-            row.appendChild(cell);
-        }
-        thead.appendChild(row);
+        render_rows(thead, [this.players], 'th');
         e.appendChild(thead);
     }
+    if (e.tBodies.length == 0) e.appendChild(document.createElement('tbody'));
+    var tb = e.tBodies[0];
+    tb.innerHTML = '';
+    var rows = [];
     var PLAYERS = this.players.length;
-    var a = [];
-    for (var i = 0; i < this.history.length; ++i) {
-        if (i == 0) {}
-        else if (i % PLAYERS == 0) { a.push('<br>'); }
-        else { a.push(', '); }
-        a.push(this.history[i]);
+    for (var i = 0; i < this.history.length; i += PLAYERS) {
+        rows.push(this.history.slice(i, i+PLAYERS).map(card_symbol));
     }
+    render_rows(tb, rows, 'td');
 };
 
 Game.prototype.render_chuck_history = function Game_render_chuck_history() {
@@ -403,18 +413,24 @@ body {
 }
 
 .statecolumn {
-    width: 25%;
+    width: 160px;
     float: left;
 }
 
 .playerstate {
     padding: 8px;
     margin-right: 8px;
-    border: 1px solid black;
+    border: 3px solid #cce;
+    font-size: 75%;
 }
 
+.playerstate.position1 { border-color: #FFD700; }
+
+.playerstate.position2 { border-color: #C0C0C0; }
+
+.playerstate.position3 { border-color: #CD7F32; }
+
 .playerstate .card {
-    font-weight: bold;
     text-align: center;
     height: 1.2em;
 }
@@ -423,6 +439,7 @@ body {
     font-size: 150%;
     font-weight: bold;
     text-align: center;
+    margin-bottom: 8px;
 }
 
 .playerstate .label {
@@ -436,6 +453,36 @@ h2 {
 
 #game_configuration {
     display: none;
+}
+
+#history thead {
+    font-size: 75%;
+}
+
+#history td, #history th {
+    width: 50px;
+}
+
+#history tr {
+    border-bottom: 1px solid #aaa;
+}
+
+#deck {
+    text-align: center;
+}
+
+.history, .chucks, #chuck_history, .chuck {
+    float: left;
+}
+
+.draw_button, .shuffle_button {
+    height: 5em;
+    vertical-align: middle;
+}
+
+.layout_row {
+    clear: both;
+    padding-top: 16px;
 }
 
 </style>
@@ -452,14 +499,18 @@ h2 {
     </div>
 </form>
 
-<div class="deck">
-    <div>
-        <input type="button" value="Draw next card" onclick="ui_draw()" />
-        <input type="button" value="Shuffle" onclick="ui_shuffle()" />
-    </div>
-    <div class="remainder"><span id="deck"></span></div>
+<div class="layout_row">
+<div style="float: left">
+    <table id="deck"></table>
+</div>
+<div style="float: left">
+    <input class="draw_button" type="button" value="Draw next card
+(space)" onclick="ui_draw()" />
+    <input class="shuffle_button" type="button" value="Shuffle" onclick="ui_shuffle()" />
+</div>
 </div>
 
+<div class="layout_row">
 <div class="state" id="playerstates">
 <div id="playerstatetemplate">
     <div class="statecolumn">
@@ -482,19 +533,22 @@ h2 {
     </div>
 </div>
 </div>
+</div>
 
-<h2>History</h2>
-<table id="history">
+<div class="layout_row">
+<div class="history">
+<table id="history" style="text-align: center">
 </table>
+</div>
 
-<h2>Chucks</h2>
+<div class="chucks">
+<div id="chuck_history">
+</div>
 <div class="chuck">
     <span id="chuck"></span><br>
     <input type="button" value="Start/stop" onclick="ui_chuck()" />
 </div>
-<div class="chuck_history">
-    <div id="chuck_history">
-    </div>
+</div>
 </div>
 
 
