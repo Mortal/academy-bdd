@@ -60,6 +60,18 @@ class GameSaveView(V.View):
         participants = list(game.participant_set.all())
         PLAYERS = len(participants)
 
+        current_cards = [dc.pk for dc in models.DrawnCard.objects.filter(game=game)]
+        models.DrawnCard.objects.filter(pk__in=current_cards).delete()
+        if current_cards:
+            logging.warning("Deleted %d DrawnCard objects from game %d"
+                    % (len(current_cards), game.pk))
+
+        current_chucks = [c.pk for c in models.Chuck.objects.filter(game=game)]
+        models.Chuck.objects.filter(pk__in=current_chucks).delete()
+        if current_chucks:
+            logging.warning("Deleted %d Chuck objects from game %d"
+                    % (len(current_chucks), game.pk))
+
         cards = [parse_card(s) for s in data['cards']]
         for idx, card in enumerate(cards):
             ts = data['cardtimes'][idx]
@@ -77,12 +89,6 @@ class GameSaveView(V.View):
             participant.sips = sum(c['number'] for c in pcards)
             participant.average = participant.sips / len(pcards)
             participant.save()
-
-        chucks = models.Chuck.objects.filter(participant__game=game)
-        n = chucks.count()
-        chucks.delete()
-        if n > 0:
-            logging.warning("GameSaveView: Deleted %d chucks for game %s" % (n, game))
 
         for chuckdata in data['chucks']:
             participant = participants[int(chuckdata['participant'])]
