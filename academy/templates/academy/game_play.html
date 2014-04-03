@@ -287,6 +287,7 @@ Game.prototype.render_state = function Game_render_state() {
         var st = this.el_state[i];
         st['card'].innerHTML = (card == '') ? '' : card_desc(card);
         st['name'].textContent = positions[i]+'. '+this.players[i];
+        st['remaining'].textContent = remaining_sips;
         st['sips'].textContent = sips[i];
         st['beers'].textContent = beers;
         st['average'].textContent = (n[i] ? round_100(sips[i] / n[i]) : '0');
@@ -408,6 +409,12 @@ body {
     font-family: monospace;
 }
 
+.state .remaining {
+    font-size: 150%;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
 .state {
     margin: 16px 0;
 }
@@ -517,6 +524,10 @@ h2 {
         <div class="playerstate">
             <div class="card"></div>
             <div class="name"></div>
+            <div>
+                <div class="label">Remaining:</div>
+                <div class="remaining"></div>
+            </div>
             <div>
                 <div class="label">Sips:</div>
                 <div class="sips"></div>
