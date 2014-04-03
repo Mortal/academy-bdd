@@ -12,7 +12,8 @@ var config = ({{ game_json|safe }});
 SUITS = config['suits'].map(function (a) { return {letter: a[0], name: a[1], color: a[2], symbol: a[3]}; });
 
 ACE = 14;
-SIPS = 14;
+
+DEFAULT_BEER = {name: 'Beer', sips: 14};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Templates in the HTML layout
@@ -88,6 +89,12 @@ function Game(elem_by_id, config) {
     this.history = [];
     this.times = [];
     this.chuck_history = [];
+    this.beer_history = [];
+    this.sips_remaining = [];
+    for (var i = 0; i < this.players.length; ++i) {
+        this.beer_history.push([]);
+        this.sips_remaining.push(0);
+    }
 
     this.el_state = unfold_template(elem_by_id('playerstatetemplate'),
                                     this.players.length);
@@ -97,18 +104,48 @@ function Game(elem_by_id, config) {
     this.is_chucking = false;
 }
 
+Game.prototype.next_beer_for_player = function Game_next_beer_for_player(player) {
+    if (this.players[player] == 'Rav') return {sips: 14, name: 'Top'};
+    else return DEFAULT_BEER;
+};
+
+Game.prototype.chuck_beer_for_player = function Game_chuck_beer_for_player(player) {
+    return {sips: 14, name: 'Bundebajer'};
+};
+
 // Button handler: Draw card
 Game.prototype.ui_draw = function Game_ui_draw() {
     if (this.is_chucking) return;
     if (this.deck.length == 0) return;
+    var player = (this.history.length % this.players.length) | 0;
     var card = this.deck.pop();
     this.history.push(card);
     this.times.push(new Date().getTime());
-    this.render();
+
     if (card_to_number(card) == ACE) {
+        this.beer_history[player].push(this.chuck_beer_for_player(player));
         this.is_chucking = true;
         this.el_chuck.textContent = 'Start the time!';
+    } else {
+        var sips = card_to_number(card);
+        while (sips > this.sips_remaining[player]) {
+            // Keep adding beers until the card sips are satisfied
+
+            // Add beer
+            var b = this.next_beer_for_player(player);
+            this.beer_history[player].push(b);
+
+            // Add beer to player sips
+            this.sips_remaining[player] += b.sips;
+
+            // Spend sips on player sips
+            var s = Math.min(sips, this.sips_remaining[player]);
+            sips -= s;
+            this.sips_remaining[player] -= s;
+        }
     }
+
+    this.render();
 };
 
 // Button handler: Start/stop chuck timer
@@ -280,14 +317,16 @@ Game.prototype.render_state = function Game_render_state() {
         var card = (this.history.length <= i) ? '' : (
             this.history[PLAYERS * (((this.history.length - i - 1) / PLAYERS) | 0) + i]);
 
-        var beers = (sips[i] / SIPS) | 0;
+        var beers = (this.beer_history[i]
+                     .map(function (b) {return b.name;})
+                     .join(' '));
 
-        var remaining_sips = (1 + beers) * SIPS - sips[i];
+        var remaining_sips = this.sips_remaining[i];
 
         var st = this.el_state[i];
         st['card'].innerHTML = (card == '') ? '' : card_desc(card);
         st['name'].textContent = positions[i]+'. '+this.players[i];
-        st['sips'].textContent = sips[i];
+        st['sips'].textContent = remaining_sips;
         st['beers'].textContent = beers;
         st['average'].textContent = (n[i] ? round_100(sips[i] / n[i]) : '0');
         st['playerstate'].className = 'playerstate position'+positions[i];
@@ -522,12 +561,12 @@ h2 {
                 <div class="sips"></div>
             </div>
             <div>
-                <div class="label">Beers:</div>
-                <div class="beers"></div>
-            </div>
-            <div>
                 <div class="label">Average:</div>
                 <div class="average"></div>
+            </div>
+            <div>
+                <div>Beers:</div>
+                <div class="beers"></div>
             </div>
         </div>
     </div>
