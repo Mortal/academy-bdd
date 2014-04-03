@@ -125,8 +125,13 @@ class DrawnCard(models.Model):
         super(DrawnCard, self).save(*args, **kwargs)
 
 class Chuck(models.Model):
+    game = models.ForeignKey(Game)
     participant = models.ForeignKey(Participant)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     time = models.IntegerField(help_text='Chuck time in milliseconds')
     card = CardField()
+
+    def save(self, *args, **kwargs):
+        self.game = self.participant.game
+        super(Chuck, self).save(*args, **kwargs)
