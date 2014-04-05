@@ -1,0 +1,1 @@
+function hello_world() {}
