@@ -1,9 +1,13 @@
 <h1>Create game</h1>
 <form method="post">{% csrf_token %}
+    <p>Suits: {{ form.suits }} {{ form.suits.errors }}</p>
     <ul>
-        {% for field in form.player_fields %}
+        {% for field in form.player_nick_fields %}
         <li>{{ field }} {{ field.errors }}</li>
         {% endfor %}
     </ul>
     <input type="submit" value="Start game" />
+    {% for field in form.player_hidden_fields %}
+    {{ field }} {{ field.errors }}
+    {% endfor %}
 </form>

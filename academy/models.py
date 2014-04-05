@@ -81,6 +81,9 @@ class CardField(with_metaclass(models.SubfieldBase, models.Field)):
         return 'CharField'
 
 class Game(models.Model):
+    suits = models.CharField(max_length=40,
+            help_text="Character array of suit letters")
+
     @property
     def sips(self):
         return 14
@@ -95,7 +98,7 @@ class Game(models.Model):
 
 class Player(models.Model):
     user = models.ForeignKey(auth.models.User, blank=True, null=True)
-    nick = models.CharField(max_length=40)
+    nick = models.CharField(max_length=40, unique=True)
 
     def __str__(self):
         return self.nick

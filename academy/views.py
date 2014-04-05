@@ -14,15 +14,23 @@ class GameCreateView(V.FormView):
     template_name = 'academy/game_create.html'
     form_class = forms.GameCreateForm
 
+    def get_context_data(self, **kwargs):
+        data = super(GameCreateView, self).get_context_data(**kwargs)
+
+        players = list(models.Player.objects.all())
+        player_dicts = [{'nick': p.nick, 'pk': p.pk} for p in players]
+
+        data['data'] = json.dumps({'players': player_dicts})
+
+        return data
+
     def form_valid(self, form):
-        game = models.Game()
+        game = models.Game(suits=form.cleaned_data['suits'])
         game.save()
-        for p in range(8):
-            if form.cleaned_data.get('player%d' % p):
-                participant = models.Participant(
-                        game=game, position=p,
-                        player=form.cleaned_data['player%d' % p])
-                participant.save()
+        for i, p in enumerate(form.players()):
+            participant = models.Participant(
+                    game=game, position=i, player=p)
+            participant.save()
         return sc.redirect('game_play', pk=game.pk)
 
 class GameListView(V.ListView):
