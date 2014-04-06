@@ -319,22 +319,29 @@ Game.prototype.render_state = function Game_render_state() {
     }
 };
 
+var History = React.createClass({
+    render: function () {
+        var history = this.props.history;
+        var players = this.props.players;
+        var headerCells = [];
+        for (var i = 0; i < players.length; ++i) {
+            headerCells.push(<th>{players[i]}</th>);
+        }
+        var header = <thead><tr>{headerCells}</tr></thead>;
+        var rows = [];
+        for (var i = 0; i < history.length; i += players.length) {
+            var cells = history.slice(i, i+players.length).map(function (c) {
+                return <td><Card suit={card_to_suit(c)} number={card_to_number(c)} /></td>;
+            });
+            rows.push(<tr>{cells}</tr>);
+        }
+        var body = <tbody>{rows}</tbody>;
+        return <table id="history" style={{'text-align': 'center'}}>{header}{body}</table>;
+    }
+});
+
 Game.prototype.render_history = function Game_render_history() {
-    var e = this.el_history;
-    if (!e.tHead) {
-        var thead = document.createElement('thead');
-        render_rows(thead, [this.players], 'th');
-        e.appendChild(thead);
-    }
-    if (e.tBodies.length == 0) e.appendChild(document.createElement('tbody'));
-    var tb = e.tBodies[0];
-    tb.innerHTML = '';
-    var rows = [];
-    var PLAYERS = this.players.length;
-    for (var i = 0; i < this.history.length; i += PLAYERS) {
-        rows.push(this.history.slice(i, i+PLAYERS).map(card_symbol));
-    }
-    render_rows(tb, rows, 'td');
+    React.renderComponent(<History players={this.players} history={this.history} />, this.el_history);
 };
 
 Game.prototype.render_chuck_history = function Game_render_chuck_history() {
