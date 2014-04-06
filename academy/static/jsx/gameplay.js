@@ -185,12 +185,40 @@ Game.prototype.set_chuck = function (milliseconds) {
     this.el_chuck.textContent = milliseconds_to_string(milliseconds);
 };
 
+var Card = React.createClass({
+    suitSymbol: function () {
+        return SUITS[this.props.suit].symbol;
+    },
+    suitColor: function () {
+        return SUITS[this.props.suit].color;
+    },
+    render: function () {
+        var number = this.props.number <= 10 ? this.props.number : 'JQKA'.charAt(this.props.number - 11);
+        return (
+            <span className="card suit_{this.suitLetter()}">
+                <span style={{'color': this.suitColor()}}>{this.suitSymbol()}</span>{number}
+            </span>
+        );
+    }
+});
+
 var Deck = React.createClass({
     render: function () {
+        var rows = [];
+        for (var i = 0; i < this.props.suits.length; ++i) {
+            var row = [];
+            var suit = this.props.suits[i];
+            for (var n = 2; n <= ACE; ++n) {
+                var c = make_card(suit, n);
+                if (this.props.deck.indexOf(c) == -1)
+                    row.push(<td>&mdash;</td>);
+                else
+                    row.push(<td><Card suit={suit} number={n} /></td>);
+            }
+            rows.push(<tr>{row}</tr>);
+        }
         return (
-            <div className="deck">
-            Hello world!
-            </div>
+            <table id="deck">{rows}</table>
         );
     }
 });
@@ -218,18 +246,9 @@ function render_rows(e, rows, celltype) {
 }
 
 Game.prototype.render_deck = function Game_render_deck() {
-    var rows = [];
-    var s = [];
-    for (var suit = 0; suit < this.suits; ++suit) {
-        var row = [];
-        for (var n = 2; n <= ACE; ++n) {
-            var c = make_card(suit, n);
-            if (this.deck.indexOf(c) == -1) row.push('&mdash;');
-            else row.push(card_symbol(c));
-        }
-        rows.push(row);
-    }
-    render_rows(this.el_deck, rows, 'td');
+    var suits = [];
+    for (var suit = 0; suit < this.suits; ++suit) suits.push(suit);
+    React.renderComponent(<Deck suits={suits} deck={this.deck} />, this.el_deck);
 };
 
 function round_100(n) {
