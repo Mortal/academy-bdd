@@ -197,7 +197,7 @@ function Game(elem_by_id, config) {
         if (this.is_chucking()) return;
         var deck = this.deck();
         if (deck.length == 0) return;
-        var card = deck.pop();
+        var card = deck[0];
         var times = this.state.times.slice();
         times.push(new Date().getTime());
         var is_chucking = false;
