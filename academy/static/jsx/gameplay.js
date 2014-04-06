@@ -430,7 +430,8 @@ var PlayerStates = React.createClass({
                 history[players.length * (((history.length - i - 1) / players.length) | 0) + i]);
 
             columns.push(<div key={i} className="statecolumn">
-                <PlayerState last_card={card} player={players[i]} sips={sips[i]} rounds={n[i]} />
+                <PlayerState last_card={card} player={players[i]} sips={sips[i]} rounds={n[i]}
+                position={positions[i]} />
             </div>);
         }
         return (
