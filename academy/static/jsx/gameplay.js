@@ -185,6 +185,16 @@ Game.prototype.set_chuck = function (milliseconds) {
     this.el_chuck.textContent = milliseconds_to_string(milliseconds);
 };
 
+var Deck = React.createClass({
+    render: function () {
+        return (
+            <div className="deck">
+            Hello world!
+            </div>
+        );
+    }
+});
+
 Game.prototype.render = function Game_render() {
     this.render_deck();
     this.render_state();
