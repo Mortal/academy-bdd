@@ -1,0 +1,26 @@
+/* vim:set ft=css sw=4: */
+body {
+    font-family: sans-serif;
+    font-size: 14px;
+    margin: 16px 32px;
+}
+
+h1 a {
+    text-decoration: none;
+}
+
+a:link {
+    color: #03f;
+}
+
+a:visited {
+    color: #60f;
+}
+
+h1 a:link, h1 a:visited {
+    color: black;
+}
+
+a:hover, h1 a:hover {
+    color: #393;
+}

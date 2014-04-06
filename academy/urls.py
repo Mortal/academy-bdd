@@ -10,7 +10,7 @@ urlpatterns = patterns('',
 
     url(r'^admin/', include(admin.site.urls)),
 
-    url(r'^$', views.FrontView.as_view()),
+    url(r'^$', views.FrontView.as_view(), name='front'),
     url(r'^game/$', views.GameListView.as_view(), name='game_list'),
     url(r'^game/simulate/$', views.GameSimulateView.as_view(), name='game_simulate'),
     url(r'^game/new/$', views.GameCreateView.as_view(), name='game_create'),

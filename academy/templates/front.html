@@ -1,4 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Welcome to Academy!</h1>
 <ul>
-<li><a href="{% url 'game_list' %}">Games</a></li>
-<li><a href="{% url 'player_list' %}">Players</a></li>
+<li><a href="{% url 'player_list' %}">List players</a></li>
+<li><a href="{% url 'game_list' %}">Game history</a></li>
+<li><a href="{% url 'game_create' %}">Start a game!</a></li>
 </ul>
+{% endblock %}

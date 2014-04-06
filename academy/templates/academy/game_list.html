@@ -1,3 +1,6 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1><a href="{% url 'front' %}">Academy</a></h1>
 <p><a href="{% url 'game_create' %}">New game</a></p>
 <form method="post" action="{% url 'game_simulate' %}">{% csrf_token %}
     <input name="players" value="4" />
@@ -8,3 +11,4 @@
 <li><a href="{% url 'game' pk=game.pk %}">{{ game }}</a></li>
 {% endfor %}
 </ul>
+{% endblock %}
