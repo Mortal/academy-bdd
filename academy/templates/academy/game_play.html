@@ -123,13 +123,10 @@ h2 {
 <form id="upload_button" method="post" action="{% url 'game_save' pk=game.pk %}">{% csrf_token %}
     <input type="hidden" name="data" value="" />
     <div>
-        Game finished!
         <input type="submit" onclick="ui_save(this.form)" value="Upload game" />
     </div>
 </form>
 <div id="game_area">
-
-
 </div>
 
 

@@ -64,10 +64,110 @@ function unfold_template(e, l) {
     return instances;
 }
 
+var ChuckButton = React.createClass({
+    getInitialState: function () {
+        return {startTime: null, stopTime: null};
+    },
+    milliseconds: function () {
+        var startTime = this.state.startTime;
+        var stopTime = this.state.stopTime || new Date().getTime();
+        return new Date().getTime() - startTime;
+    },
+    render: function () {
+        var startTime = this.state.startTime;
+        if (this.props.disabled) {
+            return <div />
+        } else if (startTime != null) {
+            var milliseconds = this.milliseconds();
+            return <div>
+                <div>{milliseconds_to_string(milliseconds)}</div>
+                <input type="button" value="Stop" onClick={this.stop} />
+            </div>;
+        } else {
+            return <div>
+                <div>Start the time!</div>
+                <input type="button" value="Start" onclick={this.start} />
+            </div>;
+        }
+    },
+    start: function () {
+        this.setState({startTime: new Date().getTime(), stopTime: null});
+    },
+    stop: function () {
+        this.setState({startTime: this.state.startTime, stopTime: new Date().getTime()});
+        this.props.onChuckSubmit(this.milliseconds());
+    }
+});
+
 ///////////////////////////////////////////////////////////////////////////////
 // Game runtime state.
 ///////////////////////////////////////////////////////////////////////////////
 
+var Game = React.createClass({
+    getInitialState: function () {
+        return {cards_drawn: 0, chuck_history: [], is_chucking: false, times: []};
+    },
+    deck: function () {
+        var cards = this.props.deck;
+        return cards.slice(this.state.cards_drawn);
+    },
+    history: function () {
+        var cards = this.props.deck;
+        return cards.slice(0, this.state.cards_drawn);
+    },
+    chuck_history: function () {
+        return this.state.chuck_history;
+    },
+    is_chucking: function () {
+        return this.state.is_chucking;
+    },
+    render: function () {
+        var suits = [];
+        for (var suit = 0; suit < this.props.suits; ++suit) suits.push(suit);
+        return (
+            <div>
+            <div className="layout_row">
+            <div style={{'float': 'left'}}>
+                <Deck suits={suits} deck={this.deck()} />
+            </div>
+            <div style={{'float': 'left'}}>
+                <input className="draw_button" type="button" value="Draw next card" onClick={this.ui_draw} />
+                <input className="shuffle_button" type="button" value="Shuffle" onClick={this.ui_shuffle} />
+            </div>
+            </div>
+            <div className="layout_row">
+            <PlayerStates players={this.props.players} history={this.history()} />
+            </div>
+
+            <div className="layout_row">
+            <div className="history">
+            <History players={this.props.players} history={this.history()} />
+            </div>
+
+            <div className="chucks">
+            <ChuckHistory data={this.chuck_history()} />
+            <ChuckButton disabled={!this.is_chucking()} onChuckSubmit={this.submit_chuck} />
+            </div>
+            </div>
+            </div>);
+    },
+
+    submit_chuck: function (start, stop) {
+        var st = this.state;
+        var history = this.history();
+        var players = this.props.players;
+        st.is_chucking = false;
+        st.chuck_history.push({
+            player: (history.length - 1) % players.length,
+            card: history[history.length - 1],
+            start: start,
+            stop: stop,
+            milliseconds: stop - start
+        });
+        this.setState(st);
+    },
+
+/*
 function Game(elem_by_id, config) {
     // elem_by_id(x) is document.getElementById(x).
     // config
@@ -84,79 +184,61 @@ function Game(elem_by_id, config) {
     this.times = [];
     this.chuck_history = [];
 
-    this.el_state = unfold_template(elem_by_id('playerstatetemplate'),
-                                    this.players.length);
+    this.el_state = elem_by_id('playerstates').parentNode;
 
     this.render();
 
     this.is_chucking = false;
 }
+*/
 
-// Button handler: Draw card
-Game.prototype.ui_draw = function Game_ui_draw() {
-    if (this.is_chucking) return;
-    if (this.deck.length == 0) return;
-    var card = this.deck.pop();
-    this.history.push(card);
-    this.times.push(new Date().getTime());
-    this.render();
-    if (card_to_number(card) == ACE) {
-        this.is_chucking = true;
-        this.el_chuck.textContent = 'Start the time!';
+    // Button handler: Draw card
+    ui_draw: function () {
+        if (this.is_chucking()) return;
+        var deck = this.deck();
+        if (deck.length == 0) return;
+        var card = deck.pop();
+        var times = this.state.times.slice();
+        times.push(new Date().getTime());
+        var is_chucking = false;
+        if (card_to_number(card) == ACE) {
+            is_chucking = true;
+        }
+        var state = {
+            is_chucking: is_chucking,
+            cards_drawn: this.state.cards_drawn + 1,
+            times: times,
+            chuck_history: this.state.chuck_history
+        };
+        this.setState(state);
+    },
+
+    // Button handler: Upload game
+    ui_save: function () {
+        // TODO
+        var data = {'cards': this.history, 'cardtimes': this.times, 'chucks': []};
+        for (var i = 0; i < this.chuck_history.length; ++i) {
+            var c = this.chuck_history[i];
+            data['chucks'].push({
+                'participant': c.player,
+                'card': c.card,
+                'start': c.start,
+                'stop': c.stop
+            });
+        }
+        form.data.value = JSON.stringify(data);
+    },
+
+    // Button handler: Shuffle
+    ui_shuffle: function () {
+        console.log("Shuffling deck...");
+        for (var i = 0; i < 52; ++i) {
+            return this.cards[i];
+        }
     }
-};
+});
 
-// Button handler: Start/stop chuck timer
-Game.prototype.ui_chuck = function Game_ui_chuck() {
-    if (!this.is_chucking) return;
-    if (!this.chuck_start) {
-        this.chuck_start = new Date().getTime();
-        this.start_chuck_timer();
-    } else {
-        var chuck_stop = new Date().getTime();
-        this.stop_chuck_timer();
-        var milliseconds = chuck_stop - this.chuck_start;
-        this.set_chuck(milliseconds);
-
-        var PLAYERS = this.players.length;
-        this.chuck_history.push({
-            player: (this.history.length - 1) % PLAYERS,
-            card: this.history[this.history.length-1],
-            start: this.chuck_start,
-            stop: chuck_stop,
-            milliseconds: milliseconds
-        });
-
-        this.is_chucking = false;
-        this.chuck_start = null;
-
-        this.render();
-    }
-};
-
-// Button handler: Upload game
-Game.prototype.ui_save = function Game_ui_save(form) {
-    var data = {'cards': this.history, 'cardtimes': this.times, 'chucks': []};
-    for (var i = 0; i < this.chuck_history.length; ++i) {
-        var c = this.chuck_history[i];
-        data['chucks'].push({
-            'participant': c.player,
-            'card': c.card,
-            'start': c.start,
-            'stop': c.stop
-        });
-    }
-    form.data.value = JSON.stringify(data);
-};
-
-// Button handler: Shuffle
-Game.prototype.ui_shuffle = function Game_ui_shuffle() {
-    console.log("Shuffling deck...");
-    for (var i = 0; i < 52; ++i) {
-	return this.cards[i];
-    }
-};
-
+/*
 Game.prototype.start_chuck_timer = function Game_start_chuck_timer() {
     var self = this;
     this.chuck_interval = setInterval(function () {
@@ -168,6 +250,7 @@ Game.prototype.start_chuck_timer = function Game_start_chuck_timer() {
 Game.prototype.stop_chuck_timer = function Game_stop_chuck_timer() {
     clearInterval(this.chuck_interval);
 };
+*/
 
 function milliseconds_to_string(milliseconds) {
     var minutes = (seconds / 60000) | 0;
@@ -181,9 +264,11 @@ function milliseconds_to_string(milliseconds) {
     return z(minutes, 2)+':'+z(seconds, 2)+'.'+z(milliseconds, 3);
 }
 
+/*
 Game.prototype.set_chuck = function (milliseconds) {
     this.el_chuck.textContent = milliseconds_to_string(milliseconds);
 };
+*/
 
 var Card = React.createClass({
     suitSymbol: function () {
@@ -211,11 +296,11 @@ var Deck = React.createClass({
             for (var n = 2; n <= ACE; ++n) {
                 var c = make_card(suit, n);
                 if (this.props.deck.indexOf(c) == -1)
-                    row.push(<td>&mdash;</td>);
+                    row.push(<td key={c}>&mdash;</td>);
                 else
-                    row.push(<td><Card suit={suit} number={n} /></td>);
+                    row.push(<td key={c}><Card suit={suit} number={n} /></td>);
             }
-            rows.push(<tr>{row}</tr>);
+            rows.push(<tr key={i}>{row}</tr>);
         }
         return (
             <table id="deck">{rows}</table>
@@ -223,6 +308,7 @@ var Deck = React.createClass({
     }
 });
 
+/*
 Game.prototype.render = function Game_render() {
     this.render_deck();
     this.render_state();
@@ -231,7 +317,9 @@ Game.prototype.render = function Game_render() {
     this.el_upload_button.style.display = (
         (this.deck.length == 0) ? '' : 'none');
 };
+*/
 
+/*
 function render_rows(e, rows, celltype) {
     e.innerHTML = '';
     for (var i = 0; i < rows.length; ++i) {
@@ -244,12 +332,15 @@ function render_rows(e, rows, celltype) {
         e.appendChild(row);
     }
 }
+*/
 
+/*
 Game.prototype.render_deck = function Game_render_deck() {
     var suits = [];
     for (var suit = 0; suit < this.suits; ++suit) suits.push(suit);
     React.renderComponent(<Deck suits={suits} deck={this.deck} />, this.el_deck);
 };
+*/
 
 function round_100(n) {
     var s = n+'';
@@ -267,9 +358,16 @@ function card_desc(card) {
     var numbers = 'Two Three Four Five Six Seven Eight Nine Ten Jack Queen King Ace'.split(' ');
     var number = card_to_number(card);
     number_name = numbers[number - 2];
-    return ('<span class="number_'+number+'">'+number_name+'</span> of <span style="color: '+suit_color+'">'+suit_name+'</span>');
+    return (
+        <span>
+            <span className={'number_'+number}>{number_name}</span>
+            {" of "}
+            <span style={{'color': suit_color}}>{suit_name}</span>
+        </span>
+    );
 }
 
+/*
 function card_symbol(card) {
     var suit = SUITS[card_to_suit(card)];
     var n = card_to_number(card);
@@ -277,47 +375,78 @@ function card_symbol(card) {
     return ('<b style="color: '+suit.color+'">'
             +suit.symbol+'</b><b class="number_'+n+'">'+n+'</b>');
 }
+*/
 
+var PlayerState = React.createClass({
+    render: function () {
+        var card = this.props.last_card ? card_desc(this.props.last_card) : <span>&mdash;</span>;
+        var name = <div className="name">{this.props.player}</div>;
+        var beers = (this.props.sips / SIPS) | 0;
+        var remaining = (1 + beers) * SIPS - this.props.sips;
+        var average = (this.props.rounds ? round_100(this.props.sips / this.props.rounds) : '0');
+        function with_label(label, value) {
+            return <div><div className="label">{label}</div>{value}</div>;
+        }
+        return (
+            <div className={"playerstate position"+this.props.position}>
+                <div className="card">{card}</div>
+                {name}
+                {with_label("Remaining:", <div className="remaining">{remaining}</div>)}
+                {with_label("Sips:", <div>{this.props.sips}</div>)}
+                {with_label("Beers:", <div>{beers}</div>)}
+                {with_label("Average:", <div>{average}</div>)}
+            </div>
+        );
+    }
+});
+
+var PlayerStates = React.createClass({
+    render: function () {
+        var players = this.props.players;
+        var history = this.props.history;
+        var sips = [];
+        var n = [];
+        for (var i = 0; i < players.length; ++i) {
+            sips.push(0);
+            n.push(0);
+            for (var j = i; j < history.length; j += players.length) {
+                sips[i] += card_to_number(history[j]);
+                ++n[i];
+            }
+        }
+        var positions = new Array(players.length);
+        var standings = sips.slice().map(function (s, i) { return [s, i]; });
+        standings.sort(function (a, b) { return b[0] - a[0]; });
+        for (var i = 0; i < players.length; ++i) {
+            if (i > 0 && standings[i][0] == standings[i-1][0]) {
+                positions[standings[i][1]] = positions[standings[i-1][1]];
+            } else {
+                positions[standings[i][1]] = i+1;
+            }
+        }
+        var columns = [];
+        for (var i = 0; i < players.length; ++i) {
+            var card = (history.length <= i) ? null : (
+                history[players.length * (((history.length - i - 1) / players.length) | 0) + i]);
+
+            columns.push(<div key={i} className="statecolumn">
+                <PlayerState last_card={card} player={players[i]} sips={sips[i]} rounds={n[i]} />
+            </div>);
+        }
+        return (
+            <div id="playerstates" className="state">
+            {columns}
+            </div>
+        );
+    }
+});
+
+/*
 Game.prototype.render_state = function Game_render_state() {
-    var PLAYERS = this.players.length;
-    var sips = [];
-    var n = [];
-    for (var i = 0; i < PLAYERS; ++i) {
-        sips.push(0);
-        n.push(0);
-        for (var j = i; j < this.history.length; j += PLAYERS) {
-            sips[i] += card_to_number(this.history[j]);
-            ++n[i];
-        }
-    }
-    var positions = new Array(PLAYERS);
-    var standings = sips.slice().map(function (s, i) { return [s, i]; });
-    standings.sort(function (a, b) { return b[0] - a[0]; });
-    for (var i = 0; i < PLAYERS; ++i) {
-        if (i > 0 && standings[i][0] == standings[i-1][0]) {
-            positions[standings[i][1]] = positions[standings[i-1][1]];
-        } else {
-            positions[standings[i][1]] = i+1;
-        }
-    }
-    for (var i = 0; i < PLAYERS; ++i) {
-        var card = (this.history.length <= i) ? '' : (
-            this.history[PLAYERS * (((this.history.length - i - 1) / PLAYERS) | 0) + i]);
-
-        var beers = (sips[i] / SIPS) | 0;
-
-        var remaining_sips = (1 + beers) * SIPS - sips[i];
-
-        var st = this.el_state[i];
-        st['card'].innerHTML = (card == '') ? '' : card_desc(card);
-        st['name'].textContent = positions[i]+'. '+this.players[i];
-        st['remaining'].textContent = remaining_sips;
-        st['sips'].textContent = sips[i];
-        st['beers'].textContent = beers;
-        st['average'].textContent = (n[i] ? round_100(sips[i] / n[i]) : '0');
-        st['playerstate'].className = 'playerstate position'+positions[i];
-    }
+    React.renderComponent(<PlayerStates players={this.players} history={this.history} />,
+        this.el_state);
 };
+*/
 
 var History = React.createClass({
     render: function () {
@@ -325,25 +454,41 @@ var History = React.createClass({
         var players = this.props.players;
         var headerCells = [];
         for (var i = 0; i < players.length; ++i) {
-            headerCells.push(<th>{players[i]}</th>);
+            headerCells.push(<th key={i}>{players[i]}</th>);
         }
         var header = <thead><tr>{headerCells}</tr></thead>;
         var rows = [];
         for (var i = 0; i < history.length; i += players.length) {
             var cells = history.slice(i, i+players.length).map(function (c) {
-                return <td><Card suit={card_to_suit(c)} number={card_to_number(c)} /></td>;
+                return <td key={c}><Card suit={card_to_suit(c)} number={card_to_number(c)} /></td>;
             });
-            rows.push(<tr>{cells}</tr>);
+            rows.push(<tr key={i}>{cells}</tr>);
         }
         var body = <tbody>{rows}</tbody>;
         return <table id="history" style={{'text-align': 'center'}}>{header}{body}</table>;
     }
 });
 
+/*
 Game.prototype.render_history = function Game_render_history() {
     React.renderComponent(<History players={this.players} history={this.history} />, this.el_history);
 };
+*/
 
+var ChuckHistory = React.createClass({
+    render: function () {
+        var lines = [];
+        var chuck_history = this.props.data;
+        for (var i = 0; i < chuck_history.length; ++i) {
+            var o = chuck_history[i];
+            lines.push(<div key={i}>
+                       {o.player} drew {card_desc(o.card)}: {milliseconds_to_string(o.milliseconds)}</div>);
+        }
+        return <div>{lines}</div>;
+    }
+});
+
+/*
 Game.prototype.render_chuck_history = function Game_render_chuck_history() {
     var a = [];
     for (var i = 0; i < this.chuck_history.length; ++i) {
@@ -355,6 +500,7 @@ Game.prototype.render_chuck_history = function Game_render_chuck_history() {
     }
     this.el_chuck_history.innerHTML = a.join('');
 };
+*/
 
 function suit_to_char(i) {
     return SUITS[i].letter;
@@ -407,74 +553,23 @@ function make_shuffled_deck(suits) {
 }
 
 window.onload = function () {
+    /*
     var ui_draw = function () { window.academy_game.ui_draw(); };
     var ui_chuck = function () { window.academy_game.ui_chuck(); };
     window.ui_save = function (form) { window.academy_game.ui_save(form); };
     var ui_shuffle = function () { window.academy_game.ui_shuffle(); };
-    React.renderComponent(
-<div>
-<div className="layout_row">
-<div style={{'float': 'left'}}>
-    <table id="deck"></table>
-</div>
-<div style={{'float': 'left'}}>
-    <input className="draw_button" type="button" value="Draw next card" onClick={ui_draw} />
-    <input className="shuffle_button" type="button" value="Shuffle" onClick={ui_shuffle} />
-</div>
-</div>
-<div className="layout_row">
-<div className="state" id="playerstates">
-<div id="playerstatetemplate">
-    <div className="statecolumn">
-        <div className="playerstate">
-            <div className="card"></div>
-            <div className="name"></div>
-            <div>
-                <div className="label">Remaining:</div>
-                <div className="remaining"></div>
-            </div>
-            <div>
-                <div className="label">Sips:</div>
-                <div className="sips"></div>
-            </div>
-            <div>
-                <div className="label">Beers:</div>
-                <div className="beers"></div>
-            </div>
-            <div>
-                <div className="label">Average:</div>
-                <div className="average"></div>
-            </div>
-        </div>
-    </div>
-</div>
-</div>
-</div>
-
-<div className="layout_row">
-<div className="history">
-<table id="history" style={{'text-align': 'center'}}>
-</table>
-</div>
-
-<div className="chucks">
-<div id="chuck_history">
-</div>
-<div className="chuck">
-    <span id="chuck"></span><br />
-    <input type="button" value="Start/stop" onClick={ui_chuck} />
-</div>
-</div>
-</div>
-</div>,
-document.getElementById('game_area'));
-
-    var elem_by_id = function (i) { return document.getElementById(i); };
-    var game_config = JSON.parse(elem_by_id('game_configuration').value);
-    window.academy_game = new Game(elem_by_id, game_config);
+    */
+    var game_config = JSON.parse(document.getElementById('game_configuration').value);
+    var players = game_config.players;
+    var suits = players.length;
+    var deck = make_shuffled_deck(suits);
+    React.renderComponent(<Game players={players} deck={deck} suits={suits} />,
+        document.getElementById('game_area'));
+    /*
     window.addEventListener('keypress', function (ev) {
         if (ev.charCode == ' '.charCodeAt(0)) {
             ui_draw();
         }
     }, false);
+    */
 };
