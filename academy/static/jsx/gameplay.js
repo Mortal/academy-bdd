@@ -167,31 +167,6 @@ var Game = React.createClass({
         this.setState(st);
     },
 
-/*
-function Game(elem_by_id, config) {
-    // elem_by_id(x) is document.getElementById(x).
-    // config
-    this.el_deck = elem_by_id('deck');
-    this.el_history = elem_by_id('history');
-    this.el_chuck = elem_by_id('chuck');
-    this.el_chuck_history = elem_by_id('chuck_history');
-    this.el_upload_button = elem_by_id('upload_button');
-    this.players = config['players'];
-    this.suits = this.players.length;
-    this.deck = make_shuffled_deck(this.suits);
-    this.chucks = [];
-    this.history = [];
-    this.times = [];
-    this.chuck_history = [];
-
-    this.el_state = elem_by_id('playerstates').parentNode;
-
-    this.render();
-
-    this.is_chucking = false;
-}
-*/
-
     // Button handler: Draw card
     ui_draw: function () {
         if (this.is_chucking()) return;
@@ -238,20 +213,6 @@ function Game(elem_by_id, config) {
     }
 });
 
-/*
-Game.prototype.start_chuck_timer = function Game_start_chuck_timer() {
-    var self = this;
-    this.chuck_interval = setInterval(function () {
-        var milliseconds = new Date().getTime() - self.chuck_start;
-        self.set_chuck(milliseconds);
-    }, 10);
-};
-
-Game.prototype.stop_chuck_timer = function Game_stop_chuck_timer() {
-    clearInterval(this.chuck_interval);
-};
-*/
-
 function milliseconds_to_string(milliseconds) {
     var minutes = (seconds / 60000) | 0;
     var seconds = (milliseconds / 1000 - minutes * 60) | 0;
@@ -263,12 +224,6 @@ function milliseconds_to_string(milliseconds) {
     }
     return z(minutes, 2)+':'+z(seconds, 2)+'.'+z(milliseconds, 3);
 }
-
-/*
-Game.prototype.set_chuck = function (milliseconds) {
-    this.el_chuck.textContent = milliseconds_to_string(milliseconds);
-};
-*/
 
 var Card = React.createClass({
     suitSymbol: function () {
@@ -308,40 +263,6 @@ var Deck = React.createClass({
     }
 });
 
-/*
-Game.prototype.render = function Game_render() {
-    this.render_deck();
-    this.render_state();
-    this.render_history();
-    this.render_chuck_history();
-    this.el_upload_button.style.display = (
-        (this.deck.length == 0) ? '' : 'none');
-};
-*/
-
-/*
-function render_rows(e, rows, celltype) {
-    e.innerHTML = '';
-    for (var i = 0; i < rows.length; ++i) {
-        var row = document.createElement('tr');
-        for (var j = 0; j < rows[i].length; ++j) {
-            var cell = document.createElement(celltype);
-            cell.innerHTML = rows[i][j];
-            row.appendChild(cell);
-        }
-        e.appendChild(row);
-    }
-}
-*/
-
-/*
-Game.prototype.render_deck = function Game_render_deck() {
-    var suits = [];
-    for (var suit = 0; suit < this.suits; ++suit) suits.push(suit);
-    React.renderComponent(<Deck suits={suits} deck={this.deck} />, this.el_deck);
-};
-*/
-
 function round_100(n) {
     var s = n+'';
     return s.replace(/([.,]..).*/, '$1');
@@ -366,16 +287,6 @@ function card_desc(card) {
         </span>
     );
 }
-
-/*
-function card_symbol(card) {
-    var suit = SUITS[card_to_suit(card)];
-    var n = card_to_number(card);
-    if (n > 10) n = 'JQKA'.charAt(n-11);
-    return ('<b style="color: '+suit.color+'">'
-            +suit.symbol+'</b><b class="number_'+n+'">'+n+'</b>');
-}
-*/
 
 var PlayerState = React.createClass({
     render: function () {
@@ -442,13 +353,6 @@ var PlayerStates = React.createClass({
     }
 });
 
-/*
-Game.prototype.render_state = function Game_render_state() {
-    React.renderComponent(<PlayerStates players={this.players} history={this.history} />,
-        this.el_state);
-};
-*/
-
 var History = React.createClass({
     render: function () {
         var history = this.props.history;
@@ -470,12 +374,6 @@ var History = React.createClass({
     }
 });
 
-/*
-Game.prototype.render_history = function Game_render_history() {
-    React.renderComponent(<History players={this.players} history={this.history} />, this.el_history);
-};
-*/
-
 var ChuckHistory = React.createClass({
     render: function () {
         var lines = [];
@@ -488,20 +386,6 @@ var ChuckHistory = React.createClass({
         return <div>{lines}</div>;
     }
 });
-
-/*
-Game.prototype.render_chuck_history = function Game_render_chuck_history() {
-    var a = [];
-    for (var i = 0; i < this.chuck_history.length; ++i) {
-        var o = this.chuck_history[i];
-        var player = this.players[o.player];
-        var card = card_desc(o.card);
-        a.push(player+' drew '+card+': '+milliseconds_to_string(o.milliseconds));
-        a.push('<br>');
-    }
-    this.el_chuck_history.innerHTML = a.join('');
-};
-*/
 
 function suit_to_char(i) {
     return SUITS[i].letter;
@@ -554,12 +438,6 @@ function make_shuffled_deck(suits) {
 }
 
 window.onload = function () {
-    /*
-    var ui_draw = function () { window.academy_game.ui_draw(); };
-    var ui_chuck = function () { window.academy_game.ui_chuck(); };
-    window.ui_save = function (form) { window.academy_game.ui_save(form); };
-    var ui_shuffle = function () { window.academy_game.ui_shuffle(); };
-    */
     var game_config = JSON.parse(document.getElementById('game_configuration').value);
     var players = game_config.players;
     var suits = players.length;
