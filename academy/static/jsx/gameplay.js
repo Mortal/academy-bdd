@@ -86,7 +86,7 @@ var ChuckButton = React.createClass({
         } else {
             return <div>
                 <div>Start the time!</div>
-                <input type="button" value="Start" onclick={this.start} />
+                <input type="button" value="Start" onClick={this.start} />
             </div>;
         }
     },
