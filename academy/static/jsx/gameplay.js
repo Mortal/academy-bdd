@@ -10,61 +10,6 @@ SUITS = config['suits'].map(function (a) { return {letter: a[0], name: a[1], col
 ACE = 14;
 SIPS = 14;
 
-///////////////////////////////////////////////////////////////////////////////
-// Templates in the HTML layout
-///////////////////////////////////////////////////////////////////////////////
-
-// Used by make_template for DOM text nodes
-function make_text_template(s) {
-    return function (dest, dict) {
-        dest.appendChild(document.createTextNode(s));
-    };
-}
-
-// Used by make_template for DOM elements
-function make_el_template(children, tagName, className) {
-    return function (dest, dict) {
-        var el = document.createElement(tagName);
-        for (var i = 0, l = children.length; i < l; ++i) {
-            children[i](el, dict);
-        }
-        if (className) {
-            el.className = className;
-            dict[className] = el;
-        }
-        dest.appendChild(el);
-    };
-}
-
-// Given an element, return a function (dest, dict) that makes a deep copy of
-// the element into the given dest, storing references to elements by their
-// className in the given dict.
-function make_template(e) {
-    if (e.nodeType == 3) { // Text
-        return make_text_template(e.nodeValue);
-    } else if (e.nodeType == 1) { // Element
-        var children = [].slice.call(e.childNodes);
-        children = children.map(make_template);
-        var className = e.className;
-        return make_el_template(children, e.tagName.toLowerCase(), className);
-    }
-}
-
-// Given an element, replace it by l copies using make_template
-// and return a list of dictionaries as returned by make_template()(dest, dict).
-function unfold_template(e, l) {
-    var instances = [];
-    var tpl = make_template(e.firstElementChild);
-    var container = e.parentNode;
-    container.removeChild(e);
-    for (var p = 0; p < l; ++p) {
-        var dict = {};
-        tpl(container, dict);
-        instances.push(dict);
-    }
-    return instances;
-}
-
 var BeerImage = React.createClass({
     waterLevel: function (fraction) {
         var ymin = 65, ymax = 289;
