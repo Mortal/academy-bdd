@@ -90,8 +90,15 @@ var ChuckButton = React.createClass({
             </div>;
         }
     },
+    tick: function () {
+        if (this.isMounted()) {
+            this.setState({});
+            window.requestAnimationFrame(this.tick);
+        }
+    },
     start: function () {
         this.setState({startTime: new Date().getTime(), stopTime: null});
+        window.requestAnimationFrame(this.tick);
     },
     stop: function () {
         this.setState({startTime: this.state.startTime, stopTime: new Date().getTime()});
