@@ -76,9 +76,7 @@ var ChuckButton = React.createClass({
     },
     render: function () {
         var startTime = this.state.startTime;
-        if (this.props.disabled) {
-            return <div />
-        } else if (startTime != null) {
+        if (startTime != null) {
             var milliseconds = this.milliseconds();
             return <div>
                 <div>{milliseconds_to_string(milliseconds)}</div>
@@ -132,6 +130,10 @@ var Game = React.createClass({
     render: function () {
         var suits = [];
         for (var suit = 0; suit < this.props.suits; ++suit) suits.push(suit);
+        var chuckButton = '';
+        if (this.is_chucking()) {
+            chuckButton = <ChuckButton onChuckSubmit={this.submit_chuck} />;
+        }
         return (
             <div>
             <div className="layout_row">
@@ -154,7 +156,7 @@ var Game = React.createClass({
 
             <div className="chucks">
             <ChuckHistory data={this.chuck_history()} />
-            <ChuckButton disabled={!this.is_chucking()} onChuckSubmit={this.submit_chuck} />
+            {chuckButton}
             </div>
             </div>
             </div>);
