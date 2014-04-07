@@ -100,8 +100,9 @@ var ChuckButton = React.createClass({
         window.requestAnimationFrame(this.tick);
     },
     stop: function () {
-        this.setState({startTime: this.state.startTime, stopTime: new Date().getTime()});
-        this.props.onChuckSubmit(this.milliseconds());
+        var st = {startTime: this.state.startTime, stopTime: new Date().getTime()};
+        this.setState(st);
+        this.props.onChuckSubmit(st.startTime, st.stopTime);
     }
 });
 
