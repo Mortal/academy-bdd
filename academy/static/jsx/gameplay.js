@@ -65,6 +65,99 @@ function unfold_template(e, l) {
     return instances;
 }
 
+var BeerImage = React.createClass({
+    waterLevel: function (fraction) {
+        var ymin = 65, ymax = 289;
+        var y = (ymin + fraction * (ymax - ymin)) | 0;
+        var xminmax = [25,56,25,56,25,57,25,57,25,57,24,58,24,58,24,58,24,58,
+            24,58,23,58,23,58,23,58,24,58,25,56,26,56,26,56,26,56,26,56,26,56,
+            26,56,26,56,26,56,26,56,26,56,26,56,26,56,26,56,26,56,25,56,25,57,
+            25,57,25,57,25,57,25,57,25,57,25,57,25,57,25,57,25,57,25,57,25,57,
+            24,58,24,58,24,58,24,58,24,58,24,58,24,58,24,59,23,59,23,59,23,59,
+            23,59,23,59,23,59,23,60,22,60,22,60,22,60,22,60,22,60,22,61,22,61,
+            21,61,21,61,21,61,21,61,21,62,20,62,20,62,20,62,20,62,20,63,20,63,
+            19,63,19,63,19,63,19,64,19,64,18,64,18,64,18,64,18,65,17,65,17,65,
+            17,65,17,66,17,66,16,66,16,66,16,67,16,67,15,67,15,67,15,67,15,68,
+            15,68,14,68,14,69,14,69,14,69,13,69,13,70,13,70,12,70,12,70,12,71,
+            12,71,11,71,11,72,11,72,10,72,10,72,10,73,10,73,9,73,9,74,9,74,8,
+            74,8,75,8,75,7,75,7,75,7,76,7,76,6,76,6,77,6,77,6,77,5,77,5,78,5,
+            78,5,78,4,78,4,78,4,79,4,79,4,79,4,79,3,79,3,79,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,
+            80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,80,3,81,3,
+            81,3,81,3,81,3,81,3,81,3,81,3,81,3,81,3,81,3,81,3,81,3,81,3,81,3,
+            80,3,80,3,80,3,80,3,80,4,80,4,80,4,80,4,79,5,78,6,77,8,74,13,68,29,
+            50,0,0];
+        var xmin = xminmax[2*y], xmax = xminmax[2*y+1];
+        return {y: y, xmin: xmin, xmax: xmax};
+    },
+    render: function () {
+        var sips = this.props.sips;
+        var remaining = this.props.remaining;
+        var fraction = 1 - remaining / sips;
+        var scale = this.props.height / 290;
+        var waterLevelData = this.waterLevel(fraction);
+        var y = waterLevelData.y;
+        var xmin = waterLevelData.xmin;
+        var xmax = waterLevelData.xmax;
+        var aspect = 80/300;
+        var height = this.props.height;
+        var full = <div style={{
+                'overflow': 'hidden',
+                'position': 'absolute',
+                'top': scale*y+'px', 'left': '0px'}}>
+            <img src="/static/beer-full.png" style={{
+                //'position': 'absolute',
+                'verticalAlign': 'top',
+                'marginTop': -scale*y+'px',
+                'height': height+'px'}} />
+        </div>;
+        var empty = <div style={{
+                'overflow': 'hidden',
+                'position': 'absolute',
+                'top': '0px', 'left': '0px'}}>
+            <img src="/static/beer-empty.png" style={{'height': height+'px'}} />
+        </div>;
+        var waterLevel = <div style={{
+                'position': 'absolute',
+                'top': scale*y + 'px',
+                'left': scale*xmin + 'px',
+                'width': scale*(xmax - xmin) + 'px',
+                'borderTop': '3px solid black',
+        }} />;
+        var sipsLabel;
+        if (fraction > 5/14) {
+            sipsLabel = <div style={{
+                'position': 'absolute',
+                'bottom': (height - scale*y) + 'px',
+                'left': '0px',
+                'height': '1em',
+                'width': '100%',
+                'textAlign': 'center'}}>{remaining}</div>;
+        } else {
+            sipsLabel = <div style={{
+                'position': 'absolute',
+                'top': scale*Math.max(y+10, 120) + 'px',
+                'left': '0px',
+                'height': '1em',
+                'width': '100%',
+                'textAlign': 'center'}}>{remaining}</div>;
+        }
+        return <div style={{
+                'display': 'inline-block',
+                'position': 'relative',
+                'height': height + 'px',
+                'width': aspect * height + 'px'
+        }}>{empty}{full}{waterLevel}{sipsLabel}</div>;
+    }
+});
+
 var ChuckButton = React.createClass({
     getInitialState: function () {
         return {startTime: null, stopTime: null};
@@ -313,7 +406,8 @@ var PlayerState = React.createClass({
             <div className={"playerstate position"+this.props.position}>
                 <div className="card">{card}</div>
                 {name}
-                {with_label("Remaining:", <div className="remaining">{remaining}</div>)}
+                {with_label("Remaining:", <div className="remaining">
+                            <BeerImage height={64} sips={SIPS} remaining={remaining} /></div>)}
                 {with_label("Sips:", <div>{this.props.sips}</div>)}
                 {with_label("Beers:", <div>{beers}</div>)}
                 {with_label("Average:", <div>{average}</div>)}
