@@ -156,7 +156,7 @@ var Game = React.createClass({
             </div>
 
             <div className="chucks">
-            <ChuckHistory data={this.chuck_history()} />
+            <ChuckHistory data={this.chuck_history()} players={this.props.players} />
             {chuckButton}
             </div>
             </div>
@@ -391,8 +391,9 @@ var ChuckHistory = React.createClass({
         var chuck_history = this.props.data;
         for (var i = 0; i < chuck_history.length; ++i) {
             var o = chuck_history[i];
+            var player = this.props.players[o.player];
             lines.push(<div key={i}>
-                       {o.player} drew {card_desc(o.card)}: {milliseconds_to_string(o.milliseconds)}</div>);
+                       {player} drew {card_desc(o.card)}: {milliseconds_to_string(o.milliseconds)}</div>);
         }
         return <div>{lines}</div>;
     }
