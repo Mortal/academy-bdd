@@ -284,9 +284,12 @@ var Card = React.createClass({
     render: function () {
         var number = this.props.number <= 10 ? this.props.number : 'JQKA'.charAt(this.props.number - 11);
         return (
-            <span className="card suit_{this.suitLetter()}">
-                <span style={{'color': this.suitColor()}}>{this.suitSymbol()}</span>{number}
-            </span>
+            <div style={{'display': 'inline-block'}}>
+                <span style={{'color': this.suitColor()}}>
+                    {this.suitSymbol()}
+                </span>
+                {number}
+            </div>
         );
     }
 });
@@ -340,9 +343,31 @@ function card_desc(card) {
     );
 }
 
+function sorted(xs, cmp) {
+    var res = [].slice.call(xs);
+    function ltgt(a, b) {
+        return cmp(a, b) ? -1 : (cmp(b, a) ? 1 : 0);
+    }
+    res.sort(ltgt);
+    return res;
+}
+
 var PlayerState = React.createClass({
     render: function () {
-        var card = this.props.last_card ? card_desc(this.props.last_card) : <span>&mdash;</span>;
+        var cards = this.props.cards;
+        var card = (cards.length
+            ? card_desc(cards[cards.length - 1])
+            : <span>&mdash;</span>);
+
+        var cardData = cards.map(function (c) {
+            return [card_to_suit(c), card_to_number(c)];
+        });
+        var cardDataSorted = sorted(cardData, function (a, b) {
+            return (a[1] != b[1]) ? (a[1] < b[1]) : (a[0] < b[0]);
+        });
+        var cardList = cardDataSorted.map(function (c) {
+            return <Card suit={c[0]} number={c[1]} />;
+        })
 
         var medal = '';
         var position = this.props.position;
@@ -379,6 +404,7 @@ var PlayerState = React.createClass({
                 {with_label("Beers:", <div>{beers}</div>)}
                 {with_label("Average:", <div>{average}</div>)}
                 <div style={{'height': '48px'}}>{beerList}</div>
+                <div style={{'height': '2.5em'}}>{cardList}</div>
             </div>
         );
     }
@@ -411,12 +437,17 @@ var PlayerStates = React.createClass({
         }
         var columns = [];
         for (var i = 0; i < players.length; ++i) {
+            var cards = [];
+            for (var j = i; j < history.length; j += players.length) {
+                cards.push(history[j]);
+            }
             var card = (history.length <= i) ? null : (
                 history[players.length * (((history.length - i - 1) / players.length) | 0) + i]);
 
             columns.push(<div key={i} className="statecolumn" style={{
                 'width': (100 / players.length)+'%'}}>
-                <PlayerState last_card={card} player={players[i]} sips={sips[i]} rounds={n[i]}
+                <PlayerState player={players[i]} cards={cards}
+                sips={sips[i]} rounds={n[i]}
                 position={positions[i]} playerColor={colors[i]} />
             </div>);
         }
