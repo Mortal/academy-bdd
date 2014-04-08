@@ -307,7 +307,10 @@ var Deck = React.createClass({
             rows.push(<tr key={i}>{row}</tr>);
         }
         return (
-            <table id="deck">{rows}</table>
+            <table id="deck" cellSpacing={0} cellPadding={0}>
+            <col span={13} width={40} />
+            {rows}
+            </table>
         );
     }
 });
@@ -340,15 +343,34 @@ function card_desc(card) {
 var PlayerState = React.createClass({
     render: function () {
         var card = this.props.last_card ? card_desc(this.props.last_card) : <span>&mdash;</span>;
-        var name = <div className="name">{this.props.player}</div>;
+
+        var medal = '';
+        var position = this.props.position;
+        if (position <= 3) {
+            var medals = ['Gold_medal_icon.svg', 'Silver_medal_icon.svg', 'Bronze_medal_icon.svg'];
+            var url = "/static/"+medals[position-1];
+            medal = <img src={url} style={{
+                'marginLeft': '-20px',
+                'marginRight': '4px',
+                'width': '16px',
+                'height': '16px',
+                'verticalAlign': '-2px'}} />;
+        }
+
+        var name = <div className="name">{medal}{this.props.player}</div>;
+
         var beers = (this.props.sips / SIPS) | 0;
         var remaining = (1 + beers) * SIPS - this.props.sips;
         var average = (this.props.rounds ? round_100(this.props.sips / this.props.rounds) : '0');
         function with_label(label, value) {
             return <div><div className="label">{label}</div>{value}</div>;
         }
+        var beerList = [];
+        for (var i = 0; i < beers; ++i) {
+            beerList.push(<img key={i} src="/static/beer-empty.png" style={{'height': '48px'}} />);
+        }
         return (
-            <div className={"playerstate position"+this.props.position}>
+            <div className="playerstate" style={{'borderColor': this.props.playerColor}}>
                 <div className="card">{card}</div>
                 {name}
                 {with_label("Remaining:", <div className="remaining">
@@ -356,6 +378,7 @@ var PlayerState = React.createClass({
                 {with_label("Sips:", <div>{this.props.sips}</div>)}
                 {with_label("Beers:", <div>{beers}</div>)}
                 {with_label("Average:", <div>{average}</div>)}
+                <div style={{'height': '48px'}}>{beerList}</div>
             </div>
         );
     }
@@ -375,6 +398,7 @@ var PlayerStates = React.createClass({
                 ++n[i];
             }
         }
+        var colors = ['#f33', '#30c', '#3c0', '#f3f'];
         var positions = new Array(players.length);
         var standings = sips.slice().map(function (s, i) { return [s, i]; });
         standings.sort(function (a, b) { return b[0] - a[0]; });
@@ -390,9 +414,10 @@ var PlayerStates = React.createClass({
             var card = (history.length <= i) ? null : (
                 history[players.length * (((history.length - i - 1) / players.length) | 0) + i]);
 
-            columns.push(<div key={i} className="statecolumn">
+            columns.push(<div key={i} className="statecolumn" style={{
+                'width': (100 / players.length)+'%'}}>
                 <PlayerState last_card={card} player={players[i]} sips={sips[i]} rounds={n[i]}
-                position={positions[i]} />
+                position={positions[i]} playerColor={colors[i]} />
             </div>);
         }
         return (
