@@ -1,4 +1,7 @@
-<h1>Create game</h1>
+{% extends 'base.html' %}
+{% block content %}
+<h1><a href="{% url 'front' %}">Academy</a></h1>
+<h2>Create game</h2>
 <form method="post">{% csrf_token %}
     <ul>
         {% for field in form.player_fields %}
@@ -7,3 +10,4 @@
     </ul>
     <input type="submit" value="Start game" />
 </form>
+{% endblock %}

@@ -1,3 +1,7 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1><a href="{% url 'front' %}">Academy</a></h1>
+<h2>Players</h2>
 <form method="post" action="{% url 'player_create' %}">{% csrf_token %}
     Name: <input name="nick" />
     <input type="submit" value="New player" />
@@ -7,3 +11,4 @@
     <li><a href="{% url 'player' pk=player.pk %}">{{ player }}</a></li>
     {% endfor %}
 </ul>
+{% endblock %}
