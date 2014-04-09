@@ -1,3 +1,5 @@
 .*.swp
 __pycache__
 db.sqlite3
+/academy/static/js/.module-cache/
+/academy/static/js/gameplay.js
