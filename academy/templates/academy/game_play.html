@@ -5,6 +5,9 @@
 <head>
 <title>Academy BDD</title>
 <script src="{% static 'js/react.js' %}"></script>
+{% if not SERVER_GENERATED_JSX %}
+<script src="http://fb.me/JSXTransformer-0.10.0.js"></script>
+{% endif %}
 <script>
 var config = ({{ game_json|safe }});
 </script>
@@ -167,6 +170,10 @@ W3A4XA5PwHPhCQT+P7In4AkIFy6HY8HSt9+349gLbz50/4Myf9fa50cnL372xeXTNbPuBJ7h2CII
 1YoIpbSY7yKEFtLZYq6d97dI8tnkvc/6C8SkDz3rQ67OAAAAAElFTkSuQmCC
 " />
 -->
+{% if not SERVER_GENERATED_JSX %}
+<script type="text/jsx" src="{% static 'jsx/gameplay.js' %}"></script>
+{% else %}
 <script src="{% static 'js/gameplay.js' %}"></script>
+{% endif %}
 </body>
 </html>

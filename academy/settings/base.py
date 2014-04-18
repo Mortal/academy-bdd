@@ -12,6 +12,21 @@ https://docs.djangoproject.com/en/dev/ref/settings/
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
+import django.conf.global_settings
+
+###############################################################################
+# Settings specific to the Academy project
+
+# SERVER_GENERATED_JSX: Whether the server compiles the sources in static/jsx/
+# into JavaScript files in static/js/.
+# To use this, install react-tools globally with npm and run
+#     cd /path/to/academy/static
+#     jsx -w jsx/ js/
+# in the background while development is ongoing, and set this to True.
+SERVER_GENERATED_JSX = False
+
+###############################################################################
+# Default Django settings
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/dev/howto/deployment/checklist/
@@ -47,6 +62,11 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
+
+TEMPLATE_CONTEXT_PROCESSORS = (
+    tuple(django.conf.global_settings.TEMPLATE_CONTEXT_PROCESSORS) + (
+    'academy.context_processors.settings',
+))
 
 ROOT_URLCONF = 'academy.urls'
 
