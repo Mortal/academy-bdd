@@ -12,20 +12,17 @@ requirements.txt:
 
 ```
 pyvenv venv
-cd venv
-source bin/activate
-pip install https://github.com/django/django/archive/1.7b1.tar.gz
-pip install -r /path/to/academy-bdd/requirements.txt
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 Now, while inside the virtual environment (activated by the command
-`source bin/activate`), enter the root of the academy project
+`source venv/bin/activate`), enter the root of the academy project
 and setup the database and run the server.
 If you are prompted by Django to create a superuser,
 this is not necessary at the current moment.
 
 ```
-cd /path/to/academy-bdd
 ./manage.py migrate
 ./manage.py runserver
 ```
