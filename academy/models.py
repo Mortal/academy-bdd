@@ -47,24 +47,39 @@ class Card(object):
         return [cls(suit=suit['letter'], number=number)
                 for suit in SUITS[:suits] for number in range(2, 15)]
 
-class CardField(with_metaclass(models.SubfieldBase, models.Field)):
+class CardField(models.Field):
     description = "A single card (suit + number)"
 
     def __init__(self, *args, **kwargs):
         kwargs['max_length'] = 2
         super(CardField, self).__init__(*args, **kwargs)
 
+    def deconstruct(self):
+        name, path, args, kwargs = super(CardField, self).deconstruct()
+        del kwargs["max_length"]
+        return name, path, args, kwargs
+
+    def from_db_value(self, value, expression, connection, context):
+        if value is None:
+            return value
+        return self.parse_card(value)
+
     def to_python(self, value):
         if value is None:
             return None
         if isinstance(value, Card):
             return value
+        return self.parse_card(value)
+
+    @staticmethod
+    def parse_card(value):
         numbers = dict(zip('23456789TJQKA', range(2,15)))
         suits = {suit['letter']: suit['letter'] for suit in SUITS}
         try:
             suit_string, number_string = value
-            return Card(suit=suits[suit_string],
-                    number=numbers[number_string])
+            return Card(
+                suit=suits[suit_string],
+                number=numbers[number_string])
         except (KeyError, ValueError):
             raise exceptions.ValidationError('Invalid input for a Card instance')
 
