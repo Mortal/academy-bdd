@@ -6,7 +6,7 @@
 <title>Academy BDD</title>
 <script src="{% static 'js/react.js' %}"></script>
 {% if not SERVER_GENERATED_JSX %}
-<script src="http://fb.me/JSXTransformer-0.10.0.js"></script>
+<script src="{% static 'js/JSXTransformer-0.10.0.js' %}"></script>
 {% endif %}
 <script>
 var config = ({{ game_json|safe }});
