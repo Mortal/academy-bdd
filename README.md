@@ -2,7 +2,7 @@ Academy
 =======
 
 This is a variant of the famous card game Academy created in Django, the Python
-web framework. The project uses Django 1.7 and Python 3.3 (or newer).
+web framework. The project uses Django 1.9 and Python 3.3 (or newer).
 
 To run the game locally, you must install PostgreSQL and Python 3 which ships
 with the `pyvenv` since Python 3.3.
